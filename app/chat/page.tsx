@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Send, RefreshCw, ChevronDown, ChevronUp, Bot, User } from "lucide-react";
 import api from "@/lib/api";
 import type { ConversationTurn, QueryRequest } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { Bot, ChevronDown, ChevronUp, RefreshCw, Send, User } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 interface Message {
   id: string;

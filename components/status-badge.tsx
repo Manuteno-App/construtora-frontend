@@ -1,5 +1,5 @@
-import type { AtestadoStatus } from "@/types";
 import { cn } from "@/lib/utils";
+import type { AtestadoStatus } from "@/types";
 
 const statusConfig: Record<
   AtestadoStatus,

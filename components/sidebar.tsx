@@ -1,15 +1,15 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import {
+    BarChart2,
+    FileText,
+    LayoutDashboard,
+    MessageSquare,
+    Upload,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  FileText,
-  Upload,
-  MessageSquare,
-  BarChart2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },

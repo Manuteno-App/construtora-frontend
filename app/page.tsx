@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { FileText, CheckCircle, Clock, AlertCircle, Upload, ArrowRight } from "lucide-react";
-import api from "@/lib/api";
-import type { AtestadoListResponse } from "@/types";
-import { StatusBadge } from "@/components/status-badge";
 import { Skeleton } from "@/components/skeleton";
+import { StatusBadge } from "@/components/status-badge";
+import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
+import type { AtestadoListResponse } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, Upload } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { data, isLoading } = useQuery<AtestadoListResponse>({

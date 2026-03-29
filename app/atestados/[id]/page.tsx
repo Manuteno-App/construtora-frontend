@@ -1,28 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
+import { Skeleton, TableSkeleton } from "@/components/skeleton";
+import { StatusBadge } from "@/components/status-badge";
+import api from "@/lib/api";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import type { Atestado, Obra, ServicoExecutado } from "@/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  Building2,
-  Briefcase,
-  FileText,
-  RefreshCw,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Hash,
-  Layers,
+    ArrowLeft,
+    Briefcase,
+    Building2,
+    Calendar,
+    DollarSign,
+    Hash,
+    MapPin,
+    RefreshCw
 } from "lucide-react";
 import Link from "next/link";
-import api from "@/lib/api";
-import type { Atestado, Obra, ServicoExecutado, StatusResponse } from "@/types";
-import { StatusBadge } from "@/components/status-badge";
-import { Skeleton, TableSkeleton } from "@/components/skeleton";
-import { EmptyState } from "@/components/empty-state";
-import { formatDate, formatCurrency, formatNumber } from "@/lib/utils";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 type Tab = "entidades" | "servicos" | "info";
 

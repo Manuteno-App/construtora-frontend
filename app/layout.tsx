@@ -1,7 +1,7 @@
+import Sidebar from "@/components/sidebar";
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
-import Sidebar from "@/components/sidebar";
 
 export const metadata: Metadata = {
   title: "Construtora Sucesso — Document Intelligence",
