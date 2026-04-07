@@ -181,7 +181,9 @@ export default function UploadPage() {
                     <CheckCircle size={16} className="text-green-600" />
                   )}
                   {entry.status === "error" && (
-                    <AlertCircle size={16} className="text-red-500" title={entry.errorMsg} />
+                    <span title={entry.errorMsg}>
+                      <AlertCircle size={16} className="text-red-500" />
+                    </span>
                   )}
                 </div>
               </li>
