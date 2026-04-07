@@ -78,10 +78,10 @@ export interface ConversationTurn {
 }
 
 export interface SourceRef {
-  chunkId?: string;
-  originalFilename?: string;
-  pageNumber?: number;
-  similarity?: number;
+  atestadoId: string;
+  filename: string;
+  pagina?: number;
+  trecho?: string;
 }
 
 export interface QuantitativoRow {
@@ -101,6 +101,14 @@ export interface AtestadoListResponse {
 export interface UploadResponse {
   atestadoId: string;
   status: AtestadoStatus;
+}
+
+export interface UploadBatchResponse {
+  results: Array<{
+    atestadoId: string;
+    status: AtestadoStatus;
+    originalFilename: string;
+  }>;
 }
 
 export interface StatusResponse {

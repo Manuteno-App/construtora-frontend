@@ -1,205 +1,229 @@
 "use client";
 
 import api from "@/lib/api";
-import type { UploadResponse } from "@/types";
-import { AlertCircle, CheckCircle, FileText, Upload, X } from "lucide-react";
+import type { UploadBatchResponse } from "@/types";
+import { AlertCircle, CheckCircle, FileText, Loader2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 
-type UploadState = "idle" | "uploading" | "done" | "error";
+type FileStatus = "pending" | "uploading" | "done" | "error";
+
+interface FileEntry {
+  file: File;
+  status: FileStatus;
+  errorMsg?: string;
+}
+
+const MAX_SIZE = 50 * 1024 * 1024;
+const MAX_FILES = 20;
+
+function validateFile(f: File): string | null {
+  if (f.type !== "application/pdf") return "Apenas PDFs são aceitos.";
+  if (f.size > MAX_SIZE) return "O arquivo deve ter no máximo 50 MB.";
+  return null;
+}
 
 export default function UploadPage() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
   const [dragOver, setDragOver] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [uploadState, setUploadState] = useState<UploadState>("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  const validateFile = (f: File): string | null => {
-    if (f.type !== "application/pdf") return "Apenas arquivos PDF são aceitos.";
-    if (f.size > 50 * 1024 * 1024) return "O arquivo deve ter no máximo 50 MB.";
-    return null;
-  };
-
-  const handleFile = useCallback((f: File) => {
-    const err = validateFile(f);
-    if (err) {
-      toast.error(err);
-      return;
+  const addFiles = useCallback((newFiles: File[]) => {
+    const toAdd: FileEntry[] = [];
+    for (const f of newFiles) {
+      const err = validateFile(f);
+      if (err) { toast.error(`${f.name}: ${err}`); continue; }
+      toAdd.push({ file: f, status: "pending" });
     }
-    setFile(f);
-    setUploadState("idle");
-    setErrorMsg("");
-    setProgress(0);
+    setEntries((prev) => {
+      const combined = [...prev, ...toAdd];
+      if (combined.length > MAX_FILES) {
+        toast.error(`Máximo de ${MAX_FILES} arquivos por envio.`);
+        return combined.slice(0, MAX_FILES);
+      }
+      return combined;
+    });
   }, []);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragOver(false);
-      const dropped = e.dataTransfer.files[0];
-      if (dropped) handleFile(dropped);
+      addFiles(Array.from(e.dataTransfer.files));
     },
-    [handleFile]
+    [addFiles]
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) handleFile(f);
+    if (e.target.files) addFiles(Array.from(e.target.files));
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setEntries((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleUpload = async () => {
-    if (!file) return;
-    setUploadState("uploading");
-    setProgress(0);
+    const pending = entries.filter((e) => e.status === "pending");
+    if (pending.length === 0) return;
+
+    setUploading(true);
+    setEntries((prev) =>
+      prev.map((e) => (e.status === "pending" ? { ...e, status: "uploading" } : e))
+    );
 
     const formData = new FormData();
-    formData.append("file", file);
+    pending.forEach((e) => formData.append("files", e.file));
 
     try {
-      const { data } = await api.post<UploadResponse>("/ingestion/upload", formData, {
+      const { data } = await api.post<UploadBatchResponse>("/ingestion/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (e) => {
-          const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
-          setProgress(pct);
-        },
       });
-      setUploadState("done");
-      toast.success("Upload realizado com sucesso! Redirecionando...");
-      setTimeout(() => router.push(`/atestados/${data.atestadoId}`), 1500);
+
+      setEntries((prev) =>
+        prev.map((e) => {
+          if (e.status !== "uploading") return e;
+          const found = data.results.find((r) => r.originalFilename === e.file.name);
+          return found ? { ...e, status: "done" } : { ...e, status: "done" };
+        })
+      );
+
+      toast.success(`${data.results.length} arquivo(s) enviado(s) com sucesso!`);
+      setTimeout(() => router.push("/atestados"), 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao enviar arquivo.";
-      setErrorMsg(msg);
-      setUploadState("error");
+      const msg = err instanceof Error ? err.message : "Erro ao enviar arquivos.";
+      setEntries((prev) =>
+        prev.map((e) => (e.status === "uploading" ? { ...e, status: "error", errorMsg: msg } : e))
+      );
       toast.error(msg);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const reset = () => {
-    setFile(null);
-    setUploadState("idle");
-    setProgress(0);
-    setErrorMsg("");
-    if (inputRef.current) inputRef.current.value = "";
-  };
+  const pendingCount = entries.filter((e) => e.status === "pending").length;
+  const allDone = entries.length > 0 && entries.every((e) => e.status === "done");
 
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Upload de Atestado</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Upload de Atestados</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Envie um PDF de atestado de obra para processamento automatizado com IA.
+          Envie um ou mais PDFs de atestado de obra para processamento automatizado com IA.
         </p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-8">
         {/* Drop zone */}
         <div
-          onClick={() => !file && inputRef.current?.click()}
+          onClick={() => !uploading && inputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          className="border-2 border-dashed rounded-xl p-10 flex flex-col items-center text-center cursor-pointer transition-colors"
+          className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center text-center cursor-pointer transition-colors"
           style={{
-            borderColor: dragOver ? "var(--primary)" : file ? "var(--primary)" : "#E5E7EB",
-            backgroundColor: dragOver ? "#FFF5EE" : file ? "#FFF5EE" : "#FAFAFA",
+            borderColor: dragOver ? "var(--primary)" : entries.length > 0 ? "var(--primary)" : "#E5E7EB",
+            backgroundColor: dragOver ? "#FFF5EE" : entries.length > 0 ? "#FFFAF7" : "#FAFAFA",
           }}
         >
           <input
             ref={inputRef}
             type="file"
             accept="application/pdf"
+            multiple
             className="hidden"
             onChange={handleInputChange}
           />
+          <div className="p-4 rounded-full mb-3" style={{ backgroundColor: "rgba(232,93,4,0.1)" }}>
+            <Upload size={28} style={{ color: "var(--primary)" }} />
+          </div>
+          <p className="text-sm font-medium text-gray-700">
+            Clique ou arraste seus PDFs aqui
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Múltiplos arquivos · Apenas PDFs · Máximo 50 MB cada · Até {MAX_FILES} arquivos
+          </p>
+        </div>
 
-          {!file ? (
-            <>
-              <div
-                className="p-4 rounded-full mb-4"
-                style={{ backgroundColor: "rgba(232,93,4,0.1)" }}
+        {/* File list */}
+        {entries.length > 0 && (
+          <ul className="mt-5 space-y-2">
+            {entries.map((entry, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg border border-gray-100 bg-gray-50"
               >
-                <Upload size={28} style={{ color: "var(--primary)" }} />
-              </div>
-              <p className="text-sm font-medium text-gray-700">
-                Clique ou arraste seu PDF aqui
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Apenas PDFs · Máximo 50 MB
-              </p>
-            </>
-          ) : (
-            <div className="flex items-center gap-4 w-full">
-              <div className="p-3 rounded-lg bg-orange-50">
-                <FileText size={22} style={{ color: "var(--primary)" }} />
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-              {uploadState === "idle" && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); reset(); }}
-                  className="p-1.5 rounded hover:bg-gray-100 text-gray-400"
-                >
-                  <X size={15} />
-                </button>
-              )}
-            </div>
+                <div className="p-2 rounded-md bg-orange-50 shrink-0">
+                  <FileText size={16} style={{ color: "var(--primary)" }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{entry.file.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {(entry.file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  {entry.status === "pending" && (
+                    <button
+                      onClick={() => removeFile(i)}
+                      className="p-1.5 rounded hover:bg-gray-200 text-gray-400"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                  {entry.status === "uploading" && (
+                    <Loader2 size={16} className="animate-spin text-orange-500" />
+                  )}
+                  {entry.status === "done" && (
+                    <CheckCircle size={16} className="text-green-600" />
+                  )}
+                  {entry.status === "error" && (
+                    <AlertCircle size={16} className="text-red-500" title={entry.errorMsg} />
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Success banner */}
+        {allDone && (
+          <div className="mt-4 flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-4 py-3 text-sm">
+            <CheckCircle size={16} />
+            Todos os arquivos enviados! Redirecionando para a lista de atestados…
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={handleUpload}
+            disabled={pendingCount === 0 || uploading || allDone}
+            className="flex-1 py-3 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+            style={{ backgroundColor: "var(--primary)" }}
+          >
+            {uploading
+              ? "Enviando…"
+              : `Enviar ${pendingCount > 0 ? `${pendingCount} arquivo(s)` : ""} para processamento`}
+          </button>
+          {entries.some((e) => e.status === "pending" || e.status === "error") && !uploading && (
+            <button
+              onClick={() => setEntries((prev) => prev.filter((e) => e.status === "done"))}
+              className="px-4 py-3 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50"
+            >
+              Limpar
+            </button>
           )}
         </div>
 
-        {/* Progress bar */}
-        {uploadState === "uploading" && (
-          <div className="mt-4">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>Enviando…</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div
-                className="h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%`, backgroundColor: "var(--primary)" }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Success */}
-        {uploadState === "done" && (
-          <div className="mt-4 flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-4 py-3 text-sm">
-            <CheckCircle size={16} />
-            Arquivo enviado! Redirecionando para o acompanhamento…
-          </div>
-        )}
-
-        {/* Error */}
-        {uploadState === "error" && (
-          <div className="mt-4 flex items-center gap-2 text-red-700 bg-red-50 rounded-lg px-4 py-3 text-sm">
-            <AlertCircle size={16} />
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Action button */}
-        <button
-          onClick={handleUpload}
-          disabled={!file || uploadState === "uploading" || uploadState === "done"}
-          className="mt-6 w-full py-3 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-40"
-          style={{ backgroundColor: "var(--primary)" }}
-        >
-          {uploadState === "uploading" ? "Enviando…" : "Enviar para processamento"}
-        </button>
-
         <p className="mt-4 text-xs text-gray-400 text-center">
-          Após o envio, o documento passará por OCR, extração de entidades e indexação para consulta via IA.
+          Após o envio, cada documento passará por OCR, extração de entidades e indexação para consulta via IA.
         </p>
       </div>
     </div>
   );
 }
+

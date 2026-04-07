@@ -1,10 +1,11 @@
 "use client";
 
 import api from "@/lib/api";
-import type { ConversationTurn, QueryRequest } from "@/types";
+import type { ConversationTurn, QueryRequest, SourceRef } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, ChevronDown, ChevronUp, RefreshCw, Send, User } from "lucide-react";
+import { Bot, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Send, User } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
 interface Message {
@@ -12,7 +13,7 @@ interface Message {
   role: "USER" | "ASSISTANT";
   content: string;
   streaming?: boolean;
-  sources?: Array<{ originalFilename?: string; pageNumber?: number }>;
+  sources?: SourceRef[];
 }
 
 export default function ChatPage() {
@@ -147,11 +148,20 @@ export default function ChatPage() {
                   )
                 );
               }
+              if (event.type === "sources") {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantId
+                      ? { ...m, sources: event.sources }
+                      : m
+                  )
+                );
+              }
               if (event.type === "done") {
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId
-                      ? { ...m, streaming: false, sources: event.sources }
+                      ? { ...m, streaming: false }
                       : m
                   )
                 );
@@ -314,23 +324,47 @@ export default function ChatPage() {
                       : "4px 16px 16px 16px",
                 }}
               >
-                {msg.content}
+                {msg.role === "USER" ? (
+                  msg.content
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li>{children}</li>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      code: ({ children }) => <code className="bg-gray-200 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+                      pre: ({ children }) => <pre className="bg-gray-200 rounded p-2 my-2 text-xs overflow-x-auto">{children}</pre>,
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                )}
                 {msg.streaming && (
                   <span className="inline-block w-1 h-4 ml-1 rounded-sm animate-pulse"
                     style={{ backgroundColor: "var(--primary)" }} />
                 )}
               </div>
               {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {msg.sources.map((s, i) => (
-                    <span
-                      key={i}
-                      className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100"
-                    >
-                      {s.originalFilename ?? "Fonte"}
-                      {s.pageNumber ? ` p.${s.pageNumber}` : ""}
-                    </span>
-                  ))}
+                <div className="mt-2 flex flex-col gap-1">
+                  <span className="text-xs text-gray-400 font-medium">Fontes:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {msg.sources.map((s, i) => (
+                      <a
+                        key={i}
+                        href={`/atestados/${s.atestadoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={s.trecho}
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors"
+                      >
+                        <ExternalLink size={10} />
+                        {s.filename ?? "Fonte"}
+                        {s.pagina ? ` p.${s.pagina}` : ""}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
