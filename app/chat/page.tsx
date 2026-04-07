@@ -204,6 +204,15 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
+  const openSourcePdf = async (atestadoId: string) => {
+    try {
+      const { data } = await api.get<{ url: string }>(`/atestados/${atestadoId}/signed-url`);
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Não foi possível abrir o PDF.");
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="flex items-center justify-between mb-4">
@@ -351,18 +360,16 @@ export default function ChatPage() {
                   <span className="text-xs text-gray-400 font-medium">Fontes:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {msg.sources.map((s, i) => (
-                      <a
+                      <button
                         key={i}
-                        href={`/atestados/${s.atestadoId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        onClick={() => openSourcePdf(s.atestadoId)}
                         title={s.trecho}
-                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer"
                       >
                         <ExternalLink size={10} />
                         {s.filename ?? "Fonte"}
                         {s.pagina ? ` p.${s.pagina}` : ""}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>

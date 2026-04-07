@@ -8,14 +8,15 @@ import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 import type { Atestado, Obra, ServicoExecutado } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-    ArrowLeft,
-    Briefcase,
-    Building2,
-    Calendar,
-    DollarSign,
-    Hash,
-    MapPin,
-    RefreshCw
+  ArrowLeft,
+  Briefcase,
+  Building2,
+  Calendar,
+  DollarSign,
+  ExternalLink,
+  Hash,
+  MapPin,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -30,6 +31,19 @@ export default function AtestadoDetailPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("entidades");
   const [categoriaFilter, setCategoriaFilter] = useState("");
+  const [openingPdf, setOpeningPdf] = useState(false);
+
+  const openPdf = async () => {
+    setOpeningPdf(true);
+    try {
+      const { data } = await api.get<{ url: string }>(`/atestados/${id}/signed-url`);
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Não foi possível abrir o PDF.");
+    } finally {
+      setOpeningPdf(false);
+    }
+  };
 
   const { data: atestado, isLoading: loadingAtestado } = useQuery<Atestado>({
     queryKey: ["atestado", id],
@@ -117,6 +131,14 @@ export default function AtestadoDetailPage() {
             >
               <RefreshCw size={14} className={reindexMutation.isPending ? "animate-spin" : ""} />
               Reprocessar
+            </button>
+            <button
+              onClick={openPdf}
+              disabled={openingPdf || !atestado}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              {openingPdf ? <RefreshCw size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+              Abrir PDF
             </button>
           </div>
         )}
