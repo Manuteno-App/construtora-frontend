@@ -1,10 +1,12 @@
 "use client";
 
+import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import {
     BarChart2,
     FileText,
     LayoutDashboard,
+    LogOut,
     MessageSquare,
     Upload,
 } from "lucide-react";
@@ -21,6 +23,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { logout, user } = useAuth();
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 flex flex-col z-30"
@@ -67,7 +70,20 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-6 py-4 border-t border-white/10">
+      <div className="px-6 py-4 border-t border-white/10 space-y-3">
+        {user && (
+          <div>
+            <p className="text-xs font-medium text-white/70 truncate">{user.name}</p>
+            <p className="text-xs text-white/40 truncate">{user.email}</p>
+          </div>
+        )}
+        <button
+          onClick={() => void logout()}
+          className="flex w-full items-center gap-2 text-xs text-white/50 hover:text-white/80 transition-colors"
+        >
+          <LogOut size={14} />
+          Sair
+        </button>
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
           © 2026 Construtora Sucesso
         </p>

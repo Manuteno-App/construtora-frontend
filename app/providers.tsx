@@ -1,8 +1,18 @@
 "use client";
 
+import { AuthProvider, useAuth } from "@/components/auth-provider";
+import { setApiAccessToken } from "@/lib/api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
+
+function TokenSync() {
+  const { accessToken } = useAuth();
+  useEffect(() => {
+    setApiAccessToken(accessToken);
+  }, [accessToken]);
+  return null;
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,8 +29,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster position="top-right" richColors />
+      <AuthProvider>
+        <TokenSync />
+        {children}
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

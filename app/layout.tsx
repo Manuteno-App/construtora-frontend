@@ -1,4 +1,3 @@
-import Sidebar from "@/components/sidebar";
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
@@ -17,10 +16,7 @@ export default function RootLayout({
     <html lang="pt-BR" className="h-full antialiased">
       <body className="min-h-full flex" style={{ backgroundColor: "var(--background)" }}>
         <Providers>
-          <Sidebar />
-          <main className="flex-1 ml-64 min-h-screen p-8">
-            {children}
-          </main>
+          {children}
         </Providers>
       </body>
     </html>
