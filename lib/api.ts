@@ -57,10 +57,12 @@ api.interceptors.response.use(
       _isRefreshing = true;
 
       try {
-        const { data } = await api.post<{ accessToken: string }>("/auth/refresh");
-        _accessToken = data.accessToken;
-        onTokenRefreshed(data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        const refreshRes = await fetch("/api/auth/refresh", { method: "POST" });
+        if (!refreshRes.ok) throw new Error("Refresh failed");
+        const { accessToken } = await refreshRes.json() as { accessToken: string };
+        _accessToken = accessToken;
+        onTokenRefreshed(accessToken);
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch {
         _accessToken = null;
