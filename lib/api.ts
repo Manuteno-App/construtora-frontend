@@ -14,6 +14,10 @@ export function setApiAccessToken(token: string | null) {
   _accessToken = token;
 }
 
+export function getApiAccessToken(): string | null {
+  return _accessToken;
+}
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (_accessToken && config.headers) {
     config.headers.Authorization = `Bearer ${_accessToken}`;

@@ -1,6 +1,6 @@
 "use client";
 
-import api from "@/lib/api";
+import api, { getApiAccessToken } from "@/lib/api";
 import type { ConversationTurn, QueryRequest, SourceRef } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Send, User } from "lucide-react";
@@ -108,9 +108,13 @@ export default function ChatPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+      const token = getApiAccessToken();
       const response = await fetch(`${apiUrl}/intelligence/query`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(buildRequest()),
         signal: controller.signal,
       });
