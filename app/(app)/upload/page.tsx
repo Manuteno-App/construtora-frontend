@@ -15,12 +15,12 @@ interface FileEntry {
   errorMsg?: string;
 }
 
-const MAX_SIZE = 50 * 1024 * 1024;
+const MAX_SIZE = 200 * 1024 * 1024;
 const MAX_FILES = 20;
 
 function validateFile(f: File): string | null {
   if (f.type !== "application/pdf") return "Apenas PDFs são aceitos.";
-  if (f.size > MAX_SIZE) return "O arquivo deve ter no máximo 50 MB.";
+  if (f.size > MAX_SIZE) return "O arquivo deve ter no máximo 200 MB.";
   return null;
 }
 
@@ -144,7 +144,7 @@ export default function UploadPage() {
             Clique ou arraste seus PDFs aqui
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            Múltiplos arquivos · Apenas PDFs · Máximo 50 MB cada · Até {MAX_FILES} arquivos
+            Múltiplos arquivos · Apenas PDFs · Máximo 200 MB cada · Até {MAX_FILES} arquivos
           </p>
         </div>
 
