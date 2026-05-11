@@ -209,7 +209,7 @@ export default function ChatPage() {
   };
 
   const stripInlineSources = (text: string) =>
-    text.replace(/\s*\[Fonte:[^\]]+\]/gi, "");
+    text.replace(/,?\s*\[Fonte:[^\]]+\],?\s*/gi, "").trim();
 
   const openSourcePdf = async (atestadoId: string, pagina?: number) => {
     try {
