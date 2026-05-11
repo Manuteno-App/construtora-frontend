@@ -208,10 +208,11 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
-  const openSourcePdf = async (atestadoId: string) => {
+  const openSourcePdf = async (atestadoId: string, pagina?: number) => {
     try {
       const { data } = await api.get<{ url: string }>(`/atestados/${atestadoId}/signed-url`);
-      window.open(data.url, "_blank", "noopener,noreferrer");
+      const url = pagina ? `${data.url}#page=${pagina}` : data.url;
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       toast.error("Não foi possível abrir o PDF.");
     }
@@ -366,7 +367,7 @@ export default function ChatPage() {
                     {msg.sources.map((s, i) => (
                       <button
                         key={i}
-                        onClick={() => openSourcePdf(s.atestadoId)}
+                        onClick={() => openSourcePdf(s.atestadoId, s.pagina)}
                         title={s.trecho}
                         className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer"
                       >
