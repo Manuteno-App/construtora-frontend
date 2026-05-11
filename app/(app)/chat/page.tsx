@@ -208,6 +208,9 @@ export default function ChatPage() {
     setIsStreaming(false);
   };
 
+  const stripInlineSources = (text: string) =>
+    text.replace(/\s*\[Fonte:[^\]]+\]/gi, "");
+
   const openSourcePdf = async (atestadoId: string, pagina?: number) => {
     try {
       const { data } = await api.get<{ url: string }>(`/atestados/${atestadoId}/signed-url`);
@@ -352,7 +355,7 @@ export default function ChatPage() {
                       pre: ({ children }) => <pre className="bg-gray-200 rounded p-2 my-2 text-xs overflow-x-auto">{children}</pre>,
                     }}
                   >
-                    {msg.content}
+                    {stripInlineSources(msg.content)}
                   </ReactMarkdown>
                 )}
                 {msg.streaming && (
