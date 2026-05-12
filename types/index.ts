@@ -89,6 +89,7 @@ export interface QuantitativoRow {
   unidade: string | null;
   total: number;
   atestados: string[];
+  atestadoRefs: { id: string; filename: string }[];
 }
 
 // ─── API Response shapes ──────────────────────────────────────────────────────
