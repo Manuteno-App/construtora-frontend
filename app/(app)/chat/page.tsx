@@ -371,12 +371,18 @@ export default function ChatPage() {
                       <button
                         key={i}
                         onClick={() => openSourcePdf(s.atestadoId, s.pagina)}
-                        title={s.trecho}
-                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer"
+                        className="flex flex-col items-start text-xs px-2.5 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer max-w-xs text-left"
                       >
-                        <ExternalLink size={10} />
-                        {s.filename ?? "Fonte"}
-                        {s.pagina ? ` p.${s.pagina}` : ""}
+                        <span className="inline-flex items-center gap-1 font-medium">
+                          <ExternalLink size={10} />
+                          {s.filename ?? "Fonte"}
+                          {s.pagina ? ` p.${s.pagina}` : ""}
+                        </span>
+                        {s.trecho && (
+                          <span className="text-orange-400 mt-0.5 leading-tight line-clamp-2 font-normal">
+                            {s.trecho.length > 80 ? s.trecho.slice(0, 80) + "…" : s.trecho}
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
