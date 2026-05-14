@@ -343,6 +343,19 @@ export default function ChatPage() {
               >
                 {msg.role === "USER" ? (
                   msg.content
+                ) : msg.streaming && msg.content === "" ? (
+                  <span className="inline-flex items-center gap-0.5 text-gray-400 text-sm">
+                    Buscando sua resposta
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className="inline-block animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s` }}
+                      >
+                        .
+                      </span>
+                    ))}
+                  </span>
                 ) : (
                   <ReactMarkdown
                     components={{
