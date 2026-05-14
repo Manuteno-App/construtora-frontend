@@ -376,31 +376,60 @@ export default function ChatPage() {
                     style={{ backgroundColor: "var(--primary)" }} />
                 )}
               </div>
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1">
-                  <span className="text-xs text-gray-400 font-medium">Fontes:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {msg.sources.map((s, i) => (
-                      <button
-                        key={i}
-                        onClick={() => openSourcePdf(s.atestadoId, s.pagina)}
-                        className="flex flex-col items-start text-xs px-2.5 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-colors cursor-pointer max-w-xs text-left"
-                      >
-                        <span className="inline-flex items-center gap-1 font-medium">
-                          <ExternalLink size={10} />
-                          {s.filename ?? "Fonte"}
-                          {s.pagina ? ` p.${s.pagina}` : ""}
-                        </span>
-                        {s.trecho && (
-                          <span className="text-orange-400 mt-0.5 leading-tight line-clamp-2 font-normal">
-                            {s.trecho.length > 80 ? s.trecho.slice(0, 80) + "…" : s.trecho}
+              {msg.sources && msg.sources.length > 0 && (() => {
+                // Group sources by atestadoId
+                const grouped = msg.sources.reduce<Record<string, { atestadoId: string; filename: string; paginas: { pagina?: number; trecho?: string }[] }>>((acc, s) => {
+                  if (!acc[s.atestadoId]) {
+                    acc[s.atestadoId] = { atestadoId: s.atestadoId, filename: s.filename, paginas: [] };
+                  }
+                  acc[s.atestadoId].paginas.push({ pagina: s.pagina, trecho: s.trecho });
+                  return acc;
+                }, {});
+                return (
+                  <div className="mt-2 flex flex-col gap-1">
+                    <span className="text-xs text-gray-400 font-medium">Fontes:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.values(grouped).map((g) => (
+                        <div
+                          key={g.atestadoId}
+                          className="flex flex-col items-start text-xs px-2.5 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 max-w-xs"
+                        >
+                          <span className="inline-flex items-center gap-1 font-medium">
+                            <ExternalLink size={10} />
+                            {g.filename ?? "Fonte"}
                           </span>
-                        )}
-                      </button>
-                    ))}
+                          {g.paginas[0]?.trecho && (
+                            <span className="text-orange-400 mt-0.5 leading-tight line-clamp-2 font-normal">
+                              {g.paginas[0].trecho.length > 80 ? g.paginas[0].trecho.slice(0, 80) + "…" : g.paginas[0].trecho}
+                            </span>
+                          )}
+                          {g.paginas.some((p) => p.pagina) && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {g.paginas.filter((p) => p.pagina).map((p, pi) => (
+                                <button
+                                  key={pi}
+                                  onClick={() => openSourcePdf(g.atestadoId, p.pagina)}
+                                  className="px-1.5 py-0.5 rounded bg-orange-200 hover:bg-orange-300 text-orange-700 font-medium transition-colors cursor-pointer"
+                                >
+                                  p.{p.pagina}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {g.paginas.every((p) => !p.pagina) && (
+                            <button
+                              onClick={() => openSourcePdf(g.atestadoId)}
+                              className="mt-1 px-1.5 py-0.5 rounded bg-orange-200 hover:bg-orange-300 text-orange-700 font-medium transition-colors cursor-pointer"
+                            >
+                              Abrir
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         ))}
