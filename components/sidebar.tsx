@@ -3,7 +3,6 @@
 import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import {
-  BarChart2,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -19,8 +18,7 @@ const navItems = [
   { href: "/atestados", label: "Atestados", icon: FileText },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/chat", label: "Chat IA", icon: MessageSquare },
-  { href: "/quantitativos", label: "Quantitativos", icon: BarChart2 },
-  { href: "/qualificacao", label: "Qualificação", icon: Shield },
+  { href: "/edital", label: "Edital", icon: Shield },
 ];
 
 export default function Sidebar() {

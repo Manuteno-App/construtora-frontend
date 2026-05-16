@@ -9,6 +9,7 @@ import type {
   QualificationFilters,
   QualificationSource,
   ResolvedDescricao,
+  ServicoBuscado,
   ServiceRequirement,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -118,33 +119,53 @@ function ServiceAutocomplete({
 
 function SourceRow({ source, openingPdf, onOpen }: { source: QualificationSource; openingPdf: string | null; onOpen: (id: string) => void }) {
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 text-sm font-medium text-gray-900 truncate max-w-[180px]" title={source.filename}>
-        {source.filename}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-600">{source.obraNome}</td>
-      <td className="px-4 py-3 text-sm text-gray-500">{source.local ?? "—"}</td>
-      <td className="px-4 py-3 text-sm text-gray-500">{source.dataInicio ?? "—"}</td>
-      <td className="px-4 py-3 text-sm text-gray-500">{source.dataFim ?? "—"}</td>
-      <td className="px-4 py-3 text-sm text-gray-500">
-        {source.valor != null ? `R$ ${source.valor.toLocaleString("pt-BR")}` : "—"}
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-500">{source.contratoNumero ?? "—"}</td>
-      <td className="px-4 py-3 text-right">
-        <button
-          onClick={() => onOpen(source.atestadoId)}
-          disabled={openingPdf === source.atestadoId}
-          className="text-xs flex items-center gap-1 text-blue-600 hover:underline disabled:opacity-40"
-        >
-          <ExternalLink size={12} />
-          {openingPdf === source.atestadoId ? "Abrindo…" : "PDF"}
-        </button>
-      </td>
-    </tr>
+    <>
+      <tr className="hover:bg-gray-50 transition-colors">
+        <td className="px-4 py-3 text-sm font-medium text-gray-900 truncate max-w-[180px]" title={source.filename}>
+          {source.filename}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600">{source.obraNome}</td>
+        <td className="px-4 py-3 text-sm text-gray-500">{source.local ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-gray-500">{source.dataInicio ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-gray-500">{source.dataFim ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-gray-500">
+          {source.valor != null ? `R$ ${source.valor.toLocaleString("pt-BR")}` : "—"}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-500">{source.contratoNumero ?? "—"}</td>
+        <td />
+        <td />
+        <td />
+        <td className="px-4 py-3 text-right">
+          <button
+            onClick={() => onOpen(source.atestadoId)}
+            disabled={openingPdf === source.atestadoId}
+            className="text-xs flex items-center gap-1 text-blue-600 hover:underline disabled:opacity-40"
+          >
+            <ExternalLink size={12} />
+            {openingPdf === source.atestadoId ? "Abrindo…" : "PDF"}
+          </button>
+        </td>
+      </tr>
+      {source.servicos?.map((s: ServicoBuscado, i: number) => (
+        <tr key={i} className="bg-gray-50/50">
+          <td colSpan={7} />
+          <td className="px-4 py-1 text-xs text-gray-500 italic max-w-[200px] truncate" title={s.descricao}>
+            {s.descricao}
+          </td>
+          <td className="px-4 py-1 text-xs text-right font-mono text-gray-700">
+            {s.quantidade != null
+              ? s.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })
+              : "—"}
+          </td>
+          <td className="px-4 py-1 text-xs text-gray-500">{s.unidade ?? "—"}</td>
+          <td />
+        </tr>
+      ))}
+    </>
   );
 }
 
-const SOURCE_HEADERS = ["Arquivo", "Obra", "Local", "Início", "Fim", "Valor", "Contrato", ""];
+const SOURCE_HEADERS = ["Arquivo", "Obra", "Local", "Início", "Fim", "Valor", "Contrato", "Serviço buscado", "Qtd", "Un", ""];
 
 function SourceTable({ sources, openingPdf, onOpen }: { sources: QualificationSource[]; openingPdf: string | null; onOpen: (id: string) => void }) {
   return (
@@ -171,7 +192,7 @@ function SourceTable({ sources, openingPdf, onOpen }: { sources: QualificationSo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function QualificacaoPage() {
+export default function EditalPage() {
   const [mode, setMode] = useState<Mode>("F1");
   const [descricoes, setDescricoes] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -324,7 +345,7 @@ export default function QualificacaoPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Qualificação Técnica</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Edital</h1>
         <p className="mt-1 text-sm text-gray-500">
           Consulta estruturada de atestados com SQL pré-definido para comprovação de capacidade técnica.
         </p>

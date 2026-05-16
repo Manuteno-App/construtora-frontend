@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { AtestadoListResponse } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, Upload } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, Shield, Upload } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -141,13 +141,11 @@ export default function DashboardPage() {
             Consultar com IA
           </Link>
           <Link
-            href="/quantitativos"
+            href="/edital"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" />
-            </svg>
-            Ver quantitativos
+            <Shield size={16} />
+            Qualificação Edital
           </Link>
         </div>
       </div>

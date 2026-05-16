@@ -146,6 +146,12 @@ export interface QualificationFilters {
   minValor?: number;
 }
 
+export interface ServicoBuscado {
+  descricao: string;
+  quantidade?: number;
+  unidade?: string;
+}
+
 export interface QualificationSource {
   atestadoId: string;
   filename: string;
@@ -155,6 +161,7 @@ export interface QualificationSource {
   dataFim?: string;
   valor?: number;
   contratoNumero?: string;
+  servicos?: ServicoBuscado[];
 }
 
 export interface ResolvedDescricao {
