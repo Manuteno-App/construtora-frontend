@@ -8,6 +8,7 @@ import {
     LayoutDashboard,
     LogOut,
     MessageSquare,
+    Shield,
     Upload,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/chat", label: "Chat IA", icon: MessageSquare },
   { href: "/quantitativos", label: "Quantitativos", icon: BarChart2 },
+  { href: "/qualificacao", label: "Qualificação", icon: Shield },
 ];
 
 export default function Sidebar() {

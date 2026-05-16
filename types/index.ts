@@ -136,3 +136,62 @@ export interface QueryResponse {
   sources: SourceRef[];
   notFound: boolean;
 }
+
+// ─── Qualification ────────────────────────────────────────────────────────────
+
+export interface QualificationFilters {
+  dataInicio?: string;
+  dataFim?: string;
+  localidade?: string;
+  minValor?: number;
+}
+
+export interface QualificationSource {
+  atestadoId: string;
+  filename: string;
+  obraNome: string;
+  local?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  valor?: number;
+  contratoNumero?: string;
+}
+
+export interface ResolvedDescricao {
+  descricao: string;
+  score: number;
+}
+
+export interface ServiceRequirement {
+  query: string;
+  minQuantidade?: number;
+}
+
+export interface ServiceCoverage {
+  serviceQuery: string;
+  resolvedDescricoes: string[];
+  qualifyingAtestados: QualificationSource[];
+  totalQuantidade?: number;
+  covered: boolean;
+}
+
+export interface BundleCoverageResult {
+  minimumSet: QualificationSource[];
+  coverageByService: ServiceCoverage[];
+  fullyQualified: boolean;
+}
+
+export interface CumulativeResult {
+  atestados: QualificationSource[];
+  totalQuantidade: number;
+  meetsMinimum: boolean;
+  minQuantidade: number;
+}
+
+export interface QualificationRequest {
+  services?: ServiceRequirement[];
+  descricoes?: string[];
+  minQuantidade?: number;
+  filters?: QualificationFilters;
+}
+
