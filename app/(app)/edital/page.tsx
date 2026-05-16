@@ -9,8 +9,8 @@ import type {
   QualificationFilters,
   QualificationSource,
   ResolvedDescricao,
-  ServicoBuscado,
   ServiceRequirement,
+  ServicoBuscado,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Filter, Search, X } from "lucide-react";

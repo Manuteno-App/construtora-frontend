@@ -3,12 +3,12 @@
 import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import {
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  MessageSquare,
-  Shield,
-  Upload,
+    FileText,
+    LayoutDashboard,
+    LogOut,
+    MessageSquare,
+    Shield,
+    Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
