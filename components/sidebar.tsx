@@ -3,13 +3,13 @@
 import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 import {
-    BarChart2,
-    FileText,
-    LayoutDashboard,
-    LogOut,
-    MessageSquare,
-    Shield,
-    Upload,
+  BarChart2,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  MessageSquare,
+  Shield,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
