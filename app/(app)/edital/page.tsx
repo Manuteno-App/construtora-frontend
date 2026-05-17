@@ -4,13 +4,13 @@ import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeleton";
 import api from "@/lib/api";
 import type {
-  BundleCoverageResult,
-  CumulativeResult,
-  QualificationFilters,
-  QualificationSource,
-  ResolvedDescricao,
-  ServiceRequirement,
-  ServicoBuscado,
+    BundleCoverageResult,
+    CumulativeResult,
+    QualificationFilters,
+    QualificationSource,
+    ResolvedDescricao,
+    ServiceRequirement,
+    ServicoBuscado,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Filter, Search, X } from "lucide-react";
