@@ -345,7 +345,7 @@ export default function EditalPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Edital</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Pesquisa</h1>
         <p className="mt-1 text-sm text-gray-500">
           Consulta estruturada de atestados com SQL pré-definido para comprovação de capacidade técnica.
         </p>

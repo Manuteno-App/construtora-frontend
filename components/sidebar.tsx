@@ -14,11 +14,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/atestados", label: "Atestados", icon: FileText },
-  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/edital", label: "Pesquisa", icon: Shield },
   { href: "/chat", label: "Chat IA", icon: MessageSquare },
-  { href: "/edital", label: "Edital", icon: Shield },
+  { href: "/atestados", label: "Atestados", icon: FileText },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/upload", label: "Upload", icon: Upload },
 ];
 
 export default function Sidebar() {
