@@ -95,7 +95,7 @@ function ServiceAutocomplete({
   }, []);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative flex-1">
       <input
         type="text"
         value={value}
@@ -105,7 +105,7 @@ function ServiceAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2"
+        className="w-full flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2"
         style={{ "--tw-ring-color": "var(--primary)" } as React.CSSProperties}
       />
       {open && suggestions && suggestions.length > 0 && (
@@ -209,11 +209,7 @@ function SourceTable({ sources, openingPdf, onOpen }: { sources: QualificationSo
 
 export default function EditalPage() {
   const [singleAtestado, setSingleAtestado] = useState(false);
-  const [criteria, setCriteria] = useState<CriterionEntry[]>(() => [
-    newCriterion(),
-    newCriterion(),
-    newCriterion(),
-  ]);
+  const [criteria, setCriteria] = useState<CriterionEntry[]>(() => [newCriterion()]);
   const [estado, setEstado] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [periodo, setPeriodo] = useState("");
@@ -422,10 +418,10 @@ export default function EditalPage() {
             {criteria.map((c, i) => (
               <div
                 key={c.id}
-                className="flex items-stretch border border-gray-200 rounded-lg overflow-hidden bg-gray-50"
+                className="flex items-stretch border border-gray-200 rounded-lg bg-white"
               >
                 {/* Index */}
-                <div className="w-8 bg-gray-100 border-r border-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 flex-shrink-0 select-none">
+                <div className="w-8 rounded-l-lg bg-gray-100 border-r border-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 flex-shrink-0 select-none">
                   {i + 1}
                 </div>
 
@@ -444,7 +440,7 @@ export default function EditalPage() {
                       value={c.minQuantidade}
                       onChange={(e) => updateCriterion(c.id, "minQuantidade", e.target.value)}
                       placeholder="Qtd. mínima"
-                      className="w-32 flex-shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
+                      className="w-28 flex-shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
                     />
                   </div>
 
@@ -486,7 +482,7 @@ export default function EditalPage() {
                 <button
                   type="button"
                   onClick={() => removeCriterion(c.id)}
-                  className="w-9 border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
+                  className="w-9 rounded-r-lg border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
                   title="Remover critério"
                 >
                   <X size={14} />
