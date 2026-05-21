@@ -28,7 +28,7 @@ export default function AtestadosPage() {
   const queryClient = useQueryClient();
   const [activeStatus, setActiveStatus] = useState<AtestadoStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<"createdAt" | "lastReprocessedAt">("createdAt");
+  const [sortBy, setSortBy] = useState<"createdAt" | "lastReprocessedAt">("lastReprocessedAt");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const query = {
