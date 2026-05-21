@@ -3,13 +3,13 @@
 import { TableSkeleton } from "@/components/skeleton";
 import api from "@/lib/api";
 import type {
-  BundleCoverageResult,
-  QualificationFilters,
-  QualificationSource,
-  ResolvedDescricao,
-  ServiceCoverage,
-  ServiceRequirement,
-  ServicoBuscado,
+    BundleCoverageResult,
+    QualificationFilters,
+    QualificationSource,
+    ResolvedDescricao,
+    ServiceCoverage,
+    ServiceRequirement,
+    ServicoBuscado,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Info, Plus, Search, X } from "lucide-react";
@@ -421,7 +421,7 @@ export default function EditalPage() {
                 className="flex items-stretch border border-gray-200 rounded-lg bg-white"
               >
                 {/* Index */}
-                <div className="w-8 rounded-l-lg bg-gray-100 border-r border-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 flex-shrink-0 select-none">
+                <div className="w-8 rounded-l-lg border-r border-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 flex-shrink-0 select-none">
                   {i + 1}
                 </div>
 

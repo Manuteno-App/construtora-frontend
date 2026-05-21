@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { AtestadoListResponse, AtestadoStatus } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, FileText, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -28,11 +28,13 @@ export default function AtestadosPage() {
   const queryClient = useQueryClient();
   const [activeStatus, setActiveStatus] = useState<AtestadoStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"createdAt" | "lastReprocessedAt">("createdAt");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const query = {
     page,
     limit: PAGE_SIZE,
+    sortBy,
     ...(activeStatus !== "ALL" && { status: activeStatus }),
   };
 
@@ -70,6 +72,11 @@ export default function AtestadosPage() {
     setPage(1);
   }, []);
 
+  const handleSortChange = useCallback((value: "createdAt" | "lastReprocessedAt") => {
+    setSortBy(value);
+    setPage(1);
+  }, []);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -88,8 +95,9 @@ export default function AtestadosPage() {
         </Link>
       </div>
 
-      {/* Status tabs */}
-      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+      {/* Sort + Status tabs */}
+      <div className="flex items-center justify-between mb-4">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -104,8 +112,19 @@ export default function AtestadosPage() {
             {tab.label}
           </button>
         ))}
+      </div>        <div className="flex items-center gap-2">
+          <ArrowUpDown size={14} className="text-gray-400" />
+          <span className="text-xs text-gray-500">Ordenar por:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value as "createdAt" | "lastReprocessedAt")}
+            className="text-xs border border-gray-200 rounded-md px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+          >
+            <option value="createdAt">Data de envio</option>
+            <option value="lastReprocessedAt">Último reprocessamento</option>
+          </select>
+        </div>
       </div>
-
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -118,10 +137,18 @@ export default function AtestadosPage() {
                 Status
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Criado em
+                {sortBy === "lastReprocessedAt" ? (
+                  <span className="text-gray-400">Criado em</span>
+                ) : (
+                  <span style={{ color: "var(--primary)" }}>Criado em ↓</span>
+                )}
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Último reprocessamento
+                {sortBy === "lastReprocessedAt" ? (
+                  <span style={{ color: "var(--primary)" }}>Último reprocessamento ↓</span>
+                ) : (
+                  <span className="text-gray-400">Último reprocessamento</span>
+                )}
               </th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Ações
