@@ -13,6 +13,7 @@ export interface Atestado {
   status: AtestadoStatus;
   errorMessage?: string;
   createdAt: string;
+  lastReprocessedAt?: string;
   obras?: Obra[];
 }
 

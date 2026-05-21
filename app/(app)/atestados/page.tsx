@@ -118,7 +118,10 @@ export default function AtestadosPage() {
                 Status
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Data
+                Criado em
+              </th>
+              <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Último reprocessamento
               </th>
               <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Ações
@@ -129,14 +132,14 @@ export default function AtestadosPage() {
             {isLoading &&
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i}>
-                  <td className="px-6 py-4" colSpan={4}>
+                  <td className="px-6 py-4" colSpan={5}>
                     <Skeleton className="h-4 w-full" />
                   </td>
                 </tr>
               ))}
             {!isLoading && items.length === 0 && (
               <tr>
-                <td colSpan={4}>
+                <td colSpan={5}>
                   <EmptyState
                     title="Nenhum atestado encontrado"
                     description="Envie um PDF para começar o processamento."
@@ -165,6 +168,9 @@ export default function AtestadosPage() {
                   </td>
                   <td className="px-6 py-3 text-gray-500">
                     {formatDate(a.createdAt)}
+                  </td>
+                  <td className="px-6 py-3 text-gray-500">
+                    {a.lastReprocessedAt ? formatDate(a.lastReprocessedAt) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-end gap-2">
