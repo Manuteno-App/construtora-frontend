@@ -3,6 +3,10 @@
 export type AtestadoStatus = "PENDING" | "PROCESSING" | "DONE" | "ERROR";
 export type EmpresaTipo = "CONTRATANTE" | "CONTRATADA";
 export type ConversationRole = "USER" | "ASSISTANT";
+export type UnitFamilyStatus = "ACTIVE" | "INACTIVE";
+export type UnitStatus = "ACTIVE" | "INACTIVE";
+export type UnitOrigin = "SYSTEM" | "AI" | "USER";
+export type TechnicalConversionStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 
@@ -57,7 +61,55 @@ export interface ServicoExecutado {
   codigo?: string;
   descricao: string;
   unidade?: string;
+  unitId?: string;
+  unitSymbolRaw?: string;
+  normalizedServiceKey?: string;
   quantidade?: number;
+}
+
+export interface UnitFamily {
+  id: string;
+  name: string;
+  slug: string;
+  status: UnitFamilyStatus;
+}
+
+export interface MeasurementUnit {
+  id: string;
+  name: string;
+  canonicalSymbol: string;
+  normalizedSymbol: string;
+  aliasesJson: string;
+  familyId: string;
+  family?: UnitFamily;
+  status: UnitStatus;
+  origin: UnitOrigin;
+}
+
+export interface MathematicalConversion {
+  id: string;
+  sourceUnitId: string;
+  targetUnitId: string;
+  factor: number;
+  type: "MATHEMATICAL";
+  ruleOrigin: UnitOrigin;
+  isActive: boolean;
+  sourceUnit?: MeasurementUnit;
+  targetUnit?: MeasurementUnit;
+}
+
+export interface TechnicalConversion {
+  id: string;
+  serviceDescription: string;
+  normalizedServiceKey: string;
+  sourceUnitId: string;
+  targetUnitId: string;
+  factor: number;
+  ruleOrigin: UnitOrigin;
+  status: TechnicalConversionStatus;
+  evidence?: Record<string, unknown>;
+  sourceUnit?: MeasurementUnit;
+  targetUnit?: MeasurementUnit;
 }
 
 export interface Chunk {
@@ -88,6 +140,7 @@ export interface SourceRef {
 export interface QuantitativoRow {
   descricao: string;
   unidade: string | null;
+  unitId?: string | null;
   total: number;
   atestados: string[];
   atestadoRefs: { id: string; filename: string }[];
@@ -151,6 +204,12 @@ export interface ServicoBuscado {
   descricao: string;
   quantidade?: number;
   unidade?: string;
+  unitId?: string;
+  unidadeOriginal?: string;
+  quantidadeConvertida?: number;
+  unidadeComparada?: string;
+  conversionKind?: "DIRECT" | "MATHEMATICAL" | "TECHNICAL";
+  conversionFactor?: number;
 }
 
 export interface QualificationSource {
@@ -173,13 +232,30 @@ export interface ResolvedDescricao {
 export interface ServiceRequirement {
   query: string;
   minQuantidade?: number;
+  unidade?: string;
+  proofMode?: ProofMode;
+  maxAtestados?: number;
 }
+
+export type ProofMode = "ONE" | "MANY" | "MAX";
+
+export type QualificationFailureReason =
+  | "NO_MATCHES"
+  | "INSUFFICIENT_QUANTITY"
+  | "MAX_ATESTADOS_EXCEEDED";
 
 export interface ServiceCoverage {
   serviceQuery: string;
   resolvedDescricoes: string[];
   qualifyingAtestados: QualificationSource[];
+  selectedAtestados?: QualificationSource[];
   totalQuantidade?: number;
+  usedAtestadosCount?: number;
+  proofModeApplied?: ProofMode;
+  maxAtestados?: number;
+  withinLimit?: boolean;
+  qualified?: boolean;
+  failureReason?: QualificationFailureReason;
   covered: boolean;
 }
 
@@ -196,10 +272,26 @@ export interface CumulativeResult {
   minQuantidade: number;
 }
 
+export interface BundleEvaluationRequest {
+  bundleMode: ProofMode;
+  maxAtestados?: number;
+  services: ServiceRequirement[];
+  filters?: QualificationFilters;
+}
+
+export interface BundleEvaluationResult {
+  bundleModeApplied: ProofMode;
+  maxAtestados?: number;
+  selectedAtestados: QualificationSource[];
+  usedAtestadosCount: number;
+  coverageByService: ServiceCoverage[];
+  fullyQualified: boolean;
+  exceededMaxAtestados: boolean;
+}
+
 export interface QualificationRequest {
   services?: ServiceRequirement[];
   descricoes?: string[];
   minQuantidade?: number;
   filters?: QualificationFilters;
 }
-

@@ -3,68 +3,52 @@
 import { TableSkeleton } from "@/components/skeleton";
 import api from "@/lib/api";
 import type {
-    BundleCoverageResult,
-    QualificationFilters,
-    QualificationSource,
-    ResolvedDescricao,
-    ServiceCoverage,
-    ServiceRequirement,
-    ServicoBuscado,
+  BundleEvaluationRequest,
+  BundleEvaluationResult,
+  ProofMode,
+  QualificationFilters,
+  QualificationSource,
+  ResolvedDescricao,
+  ServiceCoverage,
+  ServiceRequirement,
+  ServicoBuscado,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Info, Plus, Search, X } from "lucide-react";
+import { ExternalLink, Plus, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Mode = "F4" | "F5";
 
 interface CriterionEntry {
   id: number;
   query: string;
   minQuantidade: string;
-  proof: "unico" | "soma";
+  unidade: string;
+  proofMode: ProofMode;
+  maxAtestados: string;
 }
-
-interface SubmittedState {
-  mode: Mode;
-  services: ServiceRequirement[];
-  filters: QualificationFilters;
-}
-
-let _rid = 0;
-const newCriterion = (): CriterionEntry => ({
-  id: ++_rid,
-  query: "",
-  minQuantidade: "",
-  proof: "unico",
-});
 
 const ESTADOS = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
-  "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
-  "RS","RO","RR","SC","SP","SE","TO",
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ];
 
-// ─── Toggle ───────────────────────────────────────────────────────────────────
+const MODE_LABEL: Record<ProofMode, string> = {
+  ONE: "1 atestado",
+  MANY: "N atestados",
+  MAX: "X atestados",
+};
 
-function Toggle({ on }: { on: boolean }) {
-  return (
-    <span
-      className="relative inline-flex h-5 w-9 items-center rounded-full flex-shrink-0 transition-colors"
-      style={{ backgroundColor: on ? "var(--primary)" : "#d1d5db" }}
-    >
-      <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-          on ? "translate-x-4" : "translate-x-0.5"
-        }`}
-      />
-    </span>
-  );
-}
+let nextCriterionId = 0;
 
-// ─── Service autocomplete input ───────────────────────────────────────────────
+const newCriterion = (): CriterionEntry => ({
+  id: ++nextCriterionId,
+  query: "",
+  minQuantidade: "",
+  unidade: "",
+  proofMode: "ONE",
+  maxAtestados: "",
+});
 
 function ServiceAutocomplete({
   value,
@@ -130,9 +114,15 @@ function ServiceAutocomplete({
   );
 }
 
-// ─── Source row ───────────────────────────────────────────────────────────────
-
-function SourceRow({ source, openingPdf, onOpen }: { source: QualificationSource; openingPdf: string | null; onOpen: (id: string) => void }) {
+function SourceRow({
+  source,
+  openingPdf,
+  onOpen,
+}: {
+  source: QualificationSource;
+  openingPdf: string | null;
+  onOpen: (id: string) => void;
+}) {
   return (
     <>
       <tr className="hover:bg-gray-50 transition-colors">
@@ -162,17 +152,17 @@ function SourceRow({ source, openingPdf, onOpen }: { source: QualificationSource
         </td>
       </tr>
       {source.servicos?.map((s: ServicoBuscado, i: number) => (
-        <tr key={i} className="bg-gray-50/50">
+        <tr key={`${source.atestadoId}-${i}`} className="bg-gray-50/50">
           <td colSpan={7} />
           <td className="px-4 py-1 text-xs text-gray-500 italic max-w-[200px] truncate" title={s.descricao}>
             {s.descricao}
           </td>
           <td className="px-4 py-1 text-xs text-right font-mono text-gray-700">
-            {s.quantidade != null
-              ? s.quantidade.toLocaleString("pt-BR", { maximumFractionDigits: 4 })
+            {(s.quantidadeConvertida ?? s.quantidade) != null
+              ? (s.quantidadeConvertida ?? s.quantidade)!.toLocaleString("pt-BR", { maximumFractionDigits: 4 })
               : "—"}
           </td>
-          <td className="px-4 py-1 text-xs text-gray-500">{s.unidade ?? "—"}</td>
+          <td className="px-4 py-1 text-xs text-gray-500">{s.unidadeComparada ?? s.unidade ?? "—"}</td>
           <td />
         </tr>
       ))}
@@ -182,7 +172,15 @@ function SourceRow({ source, openingPdf, onOpen }: { source: QualificationSource
 
 const SOURCE_HEADERS = ["Arquivo", "Obra", "Local", "Início", "Fim", "Valor", "Contrato", "Serviço buscado", "Qtd", "Un", ""];
 
-function SourceTable({ sources, openingPdf, onOpen }: { sources: QualificationSource[]; openingPdf: string | null; onOpen: (id: string) => void }) {
+function SourceTable({
+  sources,
+  openingPdf,
+  onOpen,
+}: {
+  sources: QualificationSource[];
+  openingPdf: string | null;
+  onOpen: (id: string) => void;
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="min-w-full divide-y divide-gray-200">
@@ -205,58 +203,68 @@ function SourceTable({ sources, openingPdf, onOpen }: { sources: QualificationSo
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+function statusAppearance(coverage: ServiceCoverage) {
+  if (coverage.qualified) {
+    return { label: "Coberto", className: "bg-green-100 text-green-700" };
+  }
+  if (coverage.failureReason === "MAX_ATESTADOS_EXCEEDED") {
+    return { label: "Excede limite", className: "bg-red-100 text-red-700" };
+  }
+  if (coverage.failureReason === "INSUFFICIENT_QUANTITY") {
+    return { label: "Insuficiente", className: "bg-yellow-100 text-yellow-700" };
+  }
+  return { label: "Não coberto", className: "bg-yellow-100 text-yellow-700" };
+}
+
+function failureText(coverage: ServiceCoverage) {
+  if (coverage.failureReason === "MAX_ATESTADOS_EXCEEDED") {
+    return "O critério encontrou cobertura técnica, mas estourou o limite máximo de atestados.";
+  }
+  if (coverage.failureReason === "INSUFFICIENT_QUANTITY") {
+    return "Os atestados encontrados não somam a quantidade mínima exigida.";
+  }
+  if (coverage.failureReason === "NO_MATCHES") {
+    return "Nenhum atestado compatível foi encontrado para este critério.";
+  }
+  return null;
+}
 
 export default function EditalPage() {
-  const [singleAtestado, setSingleAtestado] = useState(false);
+  const [bundleMode, setBundleMode] = useState<ProofMode>("MANY");
+  const [bundleMaxAtestados, setBundleMaxAtestados] = useState("");
   const [criteria, setCriteria] = useState<CriterionEntry[]>(() => [newCriterion()]);
   const [estado, setEstado] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [periodo, setPeriodo] = useState("");
   const [minValorStr, setMinValorStr] = useState("");
-  const [submitted, setSubmitted] = useState<SubmittedState | null>(null);
+  const [submitted, setSubmitted] = useState<BundleEvaluationRequest | null>(null);
   const [openingPdf, setOpeningPdf] = useState<string | null>(null);
 
-  const mode: Mode = singleAtestado ? "F4" : "F5";
+  const rowRulesDisabled = bundleMode !== "MANY";
 
-  // ── Queries ────────────────────────────────────────────────────────────────
-
-  const { data: f4Data, isLoading: f4Loading, isFetching: f4Fetching } = useQuery<BundleCoverageResult>({
-    queryKey: ["qual-f4", submitted],
+  const { data, isLoading, isFetching } = useQuery<BundleEvaluationResult>({
+    queryKey: ["qual-evaluate-bundle", submitted],
     queryFn: () =>
-      api.post<BundleCoverageResult>("/qualification/find-bundle-single", {
-        services: submitted!.services,
-        filters: submitted!.filters,
-      }).then((r) => r.data),
-    enabled: submitted?.mode === "F4",
+      api.post<BundleEvaluationResult>("/qualification/evaluate-bundle", submitted!).then((r) => r.data),
+    enabled: submitted !== null,
   });
 
-  const { data: f5Data, isLoading: f5Loading, isFetching: f5Fetching } = useQuery<ServiceCoverage[]>({
-    queryKey: ["qual-f5", submitted],
-    queryFn: () =>
-      api.post<ServiceCoverage[]>("/qualification/find-bundle-cumulative", {
-        services: submitted!.services,
-        filters: submitted!.filters,
-      }).then((r) => r.data),
-    enabled: submitted?.mode === "F5",
-  });
+  const updateCriterion = (
+    id: number,
+    field: "query" | "minQuantidade" | "unidade" | "maxAtestados",
+    value: string,
+  ) => setCriteria((prev) => prev.map((c) => (c.id === id ? { ...c, [field]: value } : c)));
 
-  const isLoading =
-    (submitted?.mode === "F4" && (f4Loading || f4Fetching)) ||
-    (submitted?.mode === "F5" && (f5Loading || f5Fetching));
-
-  // ── Criteria helpers ───────────────────────────────────────────────────────
-
-  const updateCriterion = (id: number, field: "query" | "minQuantidade", value: string) =>
-    setCriteria((prev) => prev.map((c) => (c.id === id ? { ...c, [field]: value } : c)));
-
-  const setProof = (id: number, proof: "unico" | "soma") =>
-    setCriteria((prev) => prev.map((c) => (c.id === id ? { ...c, proof } : c)));
+  const setCriterionMode = (id: number, proofMode: ProofMode) =>
+    setCriteria((prev) => prev.map((c) => (c.id === id ? { ...c, proofMode } : c)));
 
   const addCriterion = () => setCriteria((prev) => [...prev, newCriterion()]);
   const removeCriterion = (id: number) => setCriteria((prev) => prev.filter((c) => c.id !== id));
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
+  const parsePositiveInteger = (value: string) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,12 +291,42 @@ export default function EditalPage() {
       ...(minValorStr ? { minValor: parseFloat(minValorStr) } : {}),
     };
 
+    let maxAtestados: number | undefined;
+    if (bundleMode === "MAX") {
+      maxAtestados = parsePositiveInteger(bundleMaxAtestados) ?? undefined;
+      if (!maxAtestados) {
+        toast.error("Informe um limite global de atestados maior que zero.");
+        return;
+      }
+    }
+
+    const services: ServiceRequirement[] = [];
+    for (const criterion of valid) {
+      const service: ServiceRequirement = {
+        query: criterion.query.trim(),
+        minQuantidade: parseFloat(criterion.minQuantidade) || undefined,
+        unidade: criterion.unidade.trim() || undefined,
+      };
+
+      if (bundleMode === "MANY") {
+        service.proofMode = criterion.proofMode;
+        if (criterion.proofMode === "MAX") {
+          const rowMaxAtestados = parsePositiveInteger(criterion.maxAtestados) ?? undefined;
+          if (!rowMaxAtestados) {
+            toast.error(`Informe um limite válido para o critério "${criterion.query.trim()}".`);
+            return;
+          }
+          service.maxAtestados = rowMaxAtestados;
+        }
+      }
+
+      services.push(service);
+    }
+
     setSubmitted({
-      mode,
-      services: valid.map((c) => ({
-        query: c.query.trim(),
-        minQuantidade: parseFloat(c.minQuantidade) || undefined,
-      })),
+      bundleMode,
+      ...(maxAtestados ? { maxAtestados } : {}),
+      services,
       filters: cleanFilters,
     });
   };
@@ -305,7 +343,7 @@ export default function EditalPage() {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const loadingResults = submitted !== null && (isLoading || isFetching);
 
   return (
     <div>
@@ -317,7 +355,6 @@ export default function EditalPage() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* ── Filter card ─────────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-4">
             Filtros da pesquisa
@@ -371,117 +408,129 @@ export default function EditalPage() {
             </div>
           </div>
 
-          {/* Atestado único toggle */}
           <div className="mt-4">
-            <label className="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5">
-              Comprovação em atestado único
-              <span className="relative group inline-flex items-center">
-                <Info size={13} className="text-gray-400 cursor-default" />
-                <span className="absolute bottom-full right-0 mb-2 w-60 bg-gray-900 text-white text-xs rounded-lg p-2.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 leading-relaxed">
-                  Ative para buscar apenas atestados que comprovem <strong>todos</strong> os critérios de
-                  uma só vez — em um único contrato ou obra.
-                  <span className="absolute top-full right-3 border-4 border-transparent border-t-gray-900" />
-                </span>
-              </span>
-            </label>
-            <button
-              type="button"
-              onClick={() => setSingleAtestado((v) => !v)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-sm transition-colors ${
-                singleAtestado
-                  ? "border-orange-300 bg-orange-50"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-              }`}
-            >
-              <Toggle on={singleAtestado} />
-              <span className={singleAtestado ? "text-orange-700 font-medium" : "text-gray-500"}>
-                {singleAtestado
-                  ? "Sim — todos os critérios devem estar comprovados no mesmo atestado"
-                  : "Não — aceitar critérios distribuídos entre diferentes atestados"}
-              </span>
-            </button>
+            <label className="block text-xs text-gray-500 mb-2">Política global de comprovação</label>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex flex-wrap gap-2">
+                {(["ONE", "MANY", "MAX"] as ProofMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setBundleMode(mode)}
+                    className={`inline-flex items-center gap-1 px-3 py-2 rounded-full border text-sm transition-colors ${
+                      bundleMode === mode
+                        ? "border-orange-400 text-orange-700 bg-orange-50"
+                        : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    {MODE_LABEL[mode]}
+                  </button>
+                ))}
+              </div>
+              {bundleMode === "MAX" && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500">Máximo global</label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={bundleMaxAtestados}
+                    onChange={(e) => setBundleMaxAtestados(e.target.value)}
+                    placeholder="Ex: 3"
+                    className="w-24 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
+                  />
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              Em <strong>N atestados</strong>, cada critério pode escolher sua própria regra. Em <strong>1</strong> ou <strong>X atestados</strong>, as regras por linha ficam travadas.
+            </p>
           </div>
         </div>
 
-        {/* ── Criteria card ───────────────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
           <div className="flex items-baseline justify-between mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Serviços e quantitativos exigidos
             </p>
             <span className="text-xs text-gray-400">
-              Informe o serviço e a quantidade mínima comprovada exigida no edital
+              Informe o serviço, a quantidade mínima e a forma de comprovação exigida
             </span>
           </div>
 
           <div className="flex flex-col gap-2">
-            {criteria.map((c, i) => (
+            {criteria.map((criterion, index) => (
               <div
-                key={c.id}
+                key={criterion.id}
                 className="flex items-stretch border border-gray-200 rounded-lg bg-white"
               >
-                {/* Index */}
                 <div className="w-8 rounded-l-lg border-r border-gray-200 flex items-center justify-center text-xs font-medium text-gray-400 flex-shrink-0 select-none">
-                  {i + 1}
+                  {index + 1}
                 </div>
 
-                {/* Body */}
                 <div className="flex-1 flex flex-col min-w-0">
-                  {/* Inputs row */}
-                  <div className="flex items-center gap-2 p-2">
+                  <div className="flex flex-col gap-2 p-2 md:flex-row md:items-center">
                     <ServiceAutocomplete
-                      value={c.query}
-                      onChange={(v) => updateCriterion(c.id, "query", v)}
+                      value={criterion.query}
+                      onChange={(value) => updateCriterion(criterion.id, "query", value)}
                     />
                     <input
                       type="number"
                       min={0}
                       step="any"
-                      value={c.minQuantidade}
-                      onChange={(e) => updateCriterion(c.id, "minQuantidade", e.target.value)}
+                      value={criterion.minQuantidade}
+                      onChange={(e) => updateCriterion(criterion.id, "minQuantidade", e.target.value)}
                       placeholder="Qtd. mínima"
-                      className="w-28 flex-shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
+                      className="w-full md:w-32 flex-shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
+                    />
+                    <input
+                      type="text"
+                      value={criterion.unidade}
+                      onChange={(e) => updateCriterion(criterion.id, "unidade", e.target.value)}
+                      placeholder="Unidade"
+                      className="w-full md:w-24 flex-shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
                     />
                   </div>
 
-                  {/* Proof pills */}
-                  <div
-                    className={`flex items-center gap-2 px-2 pb-2 ${
-                      singleAtestado ? "opacity-50 pointer-events-none" : ""
-                    }`}
-                  >
-                    <span className="text-xs text-gray-400 whitespace-nowrap">Comprovação:</span>
-                    <button
-                      type="button"
-                      disabled={singleAtestado}
-                      onClick={() => setProof(c.id, "unico")}
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs transition-colors ${
-                        singleAtestado || c.proof === "unico"
-                          ? "border-orange-400 text-orange-700 bg-orange-50"
-                          : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"
-                      }`}
-                    >
-                      Atestado único
-                    </button>
-                    <button
-                      type="button"
-                      disabled={singleAtestado}
-                      onClick={() => setProof(c.id, "soma")}
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs transition-colors ${
-                        !singleAtestado && c.proof === "soma"
-                          ? "border-orange-400 text-orange-700 bg-orange-50"
-                          : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"
-                      }`}
-                    >
-                      Soma de atestados
-                    </button>
+                  <div className={`px-2 pb-2 ${rowRulesDisabled ? "opacity-50 pointer-events-none" : ""}`}>
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                      <span className="text-xs text-gray-400 whitespace-nowrap">Comprovação:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(["ONE", "MANY", "MAX"] as ProofMode[]).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            disabled={rowRulesDisabled}
+                            onClick={() => setCriterionMode(criterion.id, mode)}
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs transition-colors ${
+                              criterion.proofMode === mode
+                                ? "border-orange-400 text-orange-700 bg-orange-50"
+                                : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"
+                            }`}
+                          >
+                            {MODE_LABEL[mode]}
+                          </button>
+                        ))}
+                      </div>
+                      {criterion.proofMode === "MAX" && (
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          disabled={rowRulesDisabled}
+                          value={criterion.maxAtestados}
+                          onChange={(e) => updateCriterion(criterion.id, "maxAtestados", e.target.value)}
+                          placeholder="Limite"
+                          className="w-24 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Remove */}
                 <button
                   type="button"
-                  onClick={() => removeCriterion(c.id)}
+                  onClick={() => removeCriterion(criterion.id)}
                   className="w-9 rounded-r-lg border-l border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors flex-shrink-0"
                   title="Remover critério"
                 >
@@ -504,18 +553,16 @@ export default function EditalPage() {
           <div className="flex justify-end mt-4">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loadingResults}
               className="flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
               style={{ backgroundColor: "var(--primary)" }}
             >
               <Search size={14} />
-              {isLoading ? "Buscando…" : "Buscar atestados"}
+              {loadingResults ? "Buscando…" : "Buscar atestados"}
             </button>
           </div>
         </div>
       </form>
-
-      {/* ── Results ──────────────────────────────────────────────────────── */}
 
       {submitted === null && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -526,124 +573,112 @@ export default function EditalPage() {
         </div>
       )}
 
-      {isLoading && submitted !== null && <TableSkeleton rows={6} />}
+      {loadingResults && <TableSkeleton rows={6} />}
 
-      {/* F4: bundle único */}
-      {!isLoading && submitted?.mode === "F4" && f4Data && (
+      {!loadingResults && data && (
         <>
           <div
             className={`mb-4 p-4 rounded-xl border ${
-              f4Data.fullyQualified ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
+              data.fullyQualified ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
             }`}
           >
-            <p
-              className={`text-sm font-semibold ${
-                f4Data.fullyQualified ? "text-green-700" : "text-yellow-700"
-              }`}
-            >
-              {f4Data.fullyQualified ? "✓ Todos os critérios cobertos" : "⚠ Cobertura parcial"}
+            <p className={`text-sm font-semibold ${data.fullyQualified ? "text-green-700" : "text-yellow-700"}`}>
+              {data.fullyQualified ? "✓ Todos os critérios cobertos" : "⚠ Cobertura parcial ou fora do limite"}
             </p>
-            <p className="text-xs mt-1 text-gray-600">
-              Conjunto mínimo:{" "}
-              <strong>{f4Data.minimumSet.length}</strong> atestado
-              {f4Data.minimumSet.length !== 1 ? "s" : ""}
-            </p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+              <span>Modo aplicado: <strong>{MODE_LABEL[data.bundleModeApplied]}</strong></span>
+              <span>Atestados usados: <strong>{data.usedAtestadosCount}</strong></span>
+              {data.maxAtestados != null && (
+                <span>Limite máximo: <strong>{data.maxAtestados}</strong></span>
+              )}
+            </div>
+            {data.exceededMaxAtestados && (
+              <p className="mt-2 text-xs text-red-600">
+                O conjunto encontrado atende tecnicamente os critérios, mas excede o número máximo de atestados permitido.
+              </p>
+            )}
           </div>
 
-          {f4Data.minimumSet.length > 0 && (
+          {data.selectedAtestados.length > 0 && (
             <div className="mb-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Conjunto mínimo</h3>
-              <SourceTable sources={f4Data.minimumSet} openingPdf={openingPdf} onOpen={openAtestadoPdf} />
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Atestados selecionados</h3>
+              <SourceTable sources={data.selectedAtestados} openingPdf={openingPdf} onOpen={openAtestadoPdf} />
             </div>
           )}
 
-          {f4Data.coverageByService.length > 0 && (
+          {data.coverageByService.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Cobertura por serviço</h3>
-              {f4Data.coverageByService.map((svc) => (
-                <details key={svc.serviceQuery} className="mb-3 border border-gray-200 rounded-xl">
-                  <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 flex items-center justify-between">
-                    <span>{svc.serviceQuery}</span>
-                    <span
-                      className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${
-                        svc.covered ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {svc.covered ? "Coberto" : "Não coberto"}
-                    </span>
-                  </summary>
-                  <div className="px-4 pb-4">
-                    {svc.resolvedDescricoes.length > 0 && (
-                      <p className="text-xs text-gray-400 mb-2">
-                        Descrições: {svc.resolvedDescricoes.join(", ")}
-                      </p>
-                    )}
-                    {svc.qualifyingAtestados.length > 0 ? (
-                      <SourceTable
-                        sources={svc.qualifyingAtestados}
-                        openingPdf={openingPdf}
-                        onOpen={openAtestadoPdf}
-                      />
-                    ) : (
-                      <p className="text-sm text-gray-400 py-2">
-                        Nenhum atestado encontrado para este serviço.
-                      </p>
-                    )}
-                  </div>
-                </details>
-              ))}
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Cobertura por critério</h3>
+              {data.coverageByService.map((coverage) => {
+                const status = statusAppearance(coverage);
+                const selectedAtestados = coverage.selectedAtestados ?? [];
+                const explanation = failureText(coverage);
+
+                return (
+                  <details key={coverage.serviceQuery} className="mb-3 border border-gray-200 rounded-xl">
+                    <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 flex items-center justify-between gap-3">
+                      <span>{coverage.serviceQuery}</span>
+                      <div className="flex items-center gap-3">
+                        {coverage.totalQuantidade != null && (
+                          <span className="text-xs text-gray-500">
+                            Total: {coverage.totalQuantidade.toLocaleString("pt-BR")}
+                          </span>
+                        )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${status.className}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
+                        <span>Regra aplicada: <strong>{MODE_LABEL[coverage.proofModeApplied ?? "MANY"]}</strong></span>
+                        {coverage.maxAtestados != null && (
+                          <span>Limite: <strong>{coverage.maxAtestados}</strong></span>
+                        )}
+                        <span>Atestados usados: <strong>{coverage.usedAtestadosCount ?? 0}</strong></span>
+                      </div>
+                      {coverage.resolvedDescricoes.length > 0 && (
+                        <p className="text-xs text-gray-400 mb-2">
+                          Descrições: {coverage.resolvedDescricoes.join(", ")}
+                        </p>
+                      )}
+                      {explanation && (
+                        <p className="text-sm text-gray-500 mb-3">{explanation}</p>
+                      )}
+
+                      {selectedAtestados.length > 0 && (
+                        <div className="mb-3">
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                            Atestados usados na comprovação
+                          </h4>
+                          <SourceTable sources={selectedAtestados} openingPdf={openingPdf} onOpen={openAtestadoPdf} />
+                        </div>
+                      )}
+
+                      {!selectedAtestados.length && coverage.qualifyingAtestados.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                            Atestados encontrados
+                          </h4>
+                          <SourceTable
+                            sources={coverage.qualifyingAtestados}
+                            openingPdf={openingPdf}
+                            onOpen={openAtestadoPdf}
+                          />
+                        </div>
+                      )}
+
+                      {!coverage.qualifyingAtestados.length && (
+                        <p className="text-sm text-gray-400 py-2">
+                          Nenhum atestado encontrado para este critério.
+                        </p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
             </div>
           )}
-        </>
-      )}
-
-      {/* F5: soma de atestados */}
-      {!isLoading && submitted?.mode === "F5" && f5Data && (
-        <>
-          <p className="text-sm text-gray-500 mb-4">
-            {f5Data.filter((s) => s.covered).length}/{f5Data.length} serviço
-            {f5Data.length !== 1 ? "s" : ""} coberto
-            {f5Data.filter((s) => s.covered).length !== 1 ? "s" : ""} pelo acervo cumulativo
-          </p>
-          {f5Data.map((svc) => (
-            <details key={svc.serviceQuery} className="mb-3 border border-gray-200 rounded-xl">
-              <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-gray-700 flex items-center justify-between">
-                <span>{svc.serviceQuery}</span>
-                <div className="flex items-center gap-3">
-                  {svc.totalQuantidade != null && (
-                    <span className="text-xs text-gray-500">
-                      Total: {svc.totalQuantidade.toLocaleString("pt-BR")}
-                    </span>
-                  )}
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      svc.covered ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {svc.covered ? "Coberto" : "Insuficiente"}
-                  </span>
-                </div>
-              </summary>
-              <div className="px-4 pb-4">
-                {svc.resolvedDescricoes.length > 0 && (
-                  <p className="text-xs text-gray-400 mb-2">
-                    Descrições: {svc.resolvedDescricoes.join(", ")}
-                  </p>
-                )}
-                {svc.qualifyingAtestados.length > 0 ? (
-                  <SourceTable
-                    sources={svc.qualifyingAtestados}
-                    openingPdf={openingPdf}
-                    onOpen={openAtestadoPdf}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-400 py-2">
-                    Nenhum atestado encontrado para este serviço.
-                  </p>
-                )}
-              </div>
-            </details>
-          ))}
         </>
       )}
     </div>

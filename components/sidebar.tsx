@@ -7,6 +7,7 @@ import {
     LayoutDashboard,
     LogOut,
     MessageSquare,
+    Ruler,
     Shield,
     Upload,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/edital", label: "Pesquisa", icon: Shield },
   { href: "/chat", label: "Chat IA", icon: MessageSquare },
   { href: "/atestados", label: "Atestados", icon: FileText },
+  { href: "/unidades", label: "Unidades", icon: Ruler },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/upload", label: "Upload", icon: Upload },
 ];
