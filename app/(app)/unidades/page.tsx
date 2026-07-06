@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Search,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -244,6 +245,18 @@ export default function UnidadesPage() {
       queryClient.invalidateQueries({ queryKey: ["measurement-units"] });
     },
     onError: () => toast.error("Não foi possível salvar a unidade."),
+  });
+
+  const deleteUnit = useMutation({
+    mutationFn: async (unit: MeasurementUnit) => api.delete(`/measurement-admin/units/${unit.id}`),
+    onSuccess: (_, unit) => {
+      toast.success(`Unidade ${unit.canonicalSymbol} excluída.`);
+      if (editingUnit?.id === unit.id) resetUnitForm();
+      queryClient.invalidateQueries({ queryKey: ["measurement-units"] });
+      queryClient.invalidateQueries({ queryKey: ["measurement-math-conversions"] });
+      queryClient.invalidateQueries({ queryKey: ["measurement-technical-conversions"] });
+    },
+    onError: () => toast.error("Não foi possível excluir a unidade."),
   });
 
   const saveMath = useMutation({
@@ -557,13 +570,29 @@ export default function UnidadesPage() {
                             <Badge tone={STATUS_STYLES[unit.status] ?? STATUS_STYLES.ACTIVE}>{unit.status}</Badge>
                           </td>
                           <td className="py-4 text-right">
-                            <button
-                              onClick={() => beginEditUnit(unit)}
-                              className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-700"
-                            >
-                              <Pencil size={14} />
-                              Editar
-                            </button>
+                            <div className="flex justify-end gap-3">
+                              <button
+                                onClick={() => beginEditUnit(unit)}
+                                className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-700"
+                              >
+                                <Pencil size={14} />
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const confirmed = window.confirm(
+                                    `Excluir a unidade ${unit.canonicalSymbol}? Esta ação remove a unidade e as conversões técnicas/matemáticas vinculadas.`,
+                                  );
+                                  if (!confirmed) return;
+                                  deleteUnit.mutate(unit);
+                                }}
+                                disabled={deleteUnit.isPending}
+                                className="inline-flex items-center gap-1 text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                              >
+                                <Trash2 size={14} />
+                                {deleteUnit.isPending ? "Excluindo..." : "Excluir"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
