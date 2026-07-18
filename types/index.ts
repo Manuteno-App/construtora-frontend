@@ -56,7 +56,6 @@ export interface ServicoExecutado {
   id: string;
   atestadoId: string;
   obraId?: string;
-  trecho?: string;
   categoria?: string;
   codigo?: string;
   descricao: string;

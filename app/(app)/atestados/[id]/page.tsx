@@ -319,7 +319,6 @@ export default function AtestadoDetailPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Código</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Descrição</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Categoria</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Trecho</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qtd</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Un</th>
                   </tr>
@@ -332,7 +331,6 @@ export default function AtestadoDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-800">{s.descricao}</td>
                       <td className="px-4 py-3 text-gray-500">{s.categoria ?? "—"}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{s.trecho ?? "—"}</td>
                       <td className="px-4 py-3 text-right text-gray-800 font-mono">
                         {s.quantidade != null ? formatNumber(s.quantidade, 4) : "—"}
                       </td>
