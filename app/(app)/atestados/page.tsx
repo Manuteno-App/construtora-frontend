@@ -237,7 +237,7 @@ export default function AtestadosPage() {
                     {formatDate(a.createdAt)}
                   </td>
                   <td className="px-6 py-3 text-gray-500">
-                    {a.lastReprocessedAt ? formatDate(a.lastReprocessedAt) : <span className="text-gray-300">â€”</span>}
+                    {a.lastReprocessedAt ? formatDate(a.lastReprocessedAt) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-end gap-2">
