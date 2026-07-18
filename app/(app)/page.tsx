@@ -48,7 +48,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((m) => (
           <div
             key={m.label}
@@ -73,9 +73,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent docs + Quick actions */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Recent */}
-        <div className="col-span-2 bg-white rounded-xl border border-gray-200">
+        <div className="bg-white rounded-xl border border-gray-200 xl:col-span-2">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800 text-sm">Atestados Recentes</h2>
             <Link
@@ -103,7 +103,7 @@ export default function DashboardPage() {
                 <Link
                   key={a.id}
                   href={`/atestados/${a.id}`}
-                  className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 transition-colors"
+                  className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50 transition-colors sm:items-center sm:px-6"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FileText size={16} className="text-gray-400 shrink-0" />
@@ -111,7 +111,7 @@ export default function DashboardPage() {
                       {a.originalFilename}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <div className="flex flex-col items-end gap-1 shrink-0 sm:ml-4 sm:flex-row sm:items-center sm:gap-3">
                     <StatusBadge status={a.status} />
                     <span className="text-xs text-gray-400">{formatDate(a.createdAt)}</span>
                   </div>

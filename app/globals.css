@@ -31,3 +31,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media (min-width: 1024px) {
+  body > main {
+    flex: none;
+    width: calc(100vw - 16rem);
+    margin-left: 16rem;
+  }
+}

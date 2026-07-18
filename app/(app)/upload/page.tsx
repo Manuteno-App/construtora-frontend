@@ -116,14 +116,14 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-8">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-8">
         {/* Drop zone */}
         <div
           onClick={() => !uploading && inputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center text-center cursor-pointer transition-colors"
+          className="border-2 border-dashed rounded-xl p-5 sm:p-8 flex flex-col items-center text-center cursor-pointer transition-colors"
           style={{
             borderColor: dragOver ? "var(--primary)" : entries.length > 0 ? "var(--primary)" : "#E5E7EB",
             backgroundColor: dragOver ? "#FFF5EE" : entries.length > 0 ? "#FFFAF7" : "#FAFAFA",
@@ -200,7 +200,7 @@ export default function UploadPage() {
         )}
 
         {/* Actions */}
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
             onClick={handleUpload}
             disabled={pendingCount === 0 || uploading || allDone}

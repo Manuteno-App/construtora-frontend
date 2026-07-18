@@ -222,8 +222,8 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex w-full min-w-0 flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-4rem)]">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Chat IA</h1>
           <p className="text-sm text-gray-500">
@@ -249,7 +249,7 @@ export default function ChatPage() {
           {showFilters ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
         </button>
         {showFilters && (
-          <div className="px-4 pb-4 grid grid-cols-3 gap-3 border-t border-gray-100 pt-3">
+          <div className="px-4 pb-4 grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { key: "estado", label: "Estado (UF)" },
               { key: "obraId", label: "ID da Obra" },

@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="h-full antialiased">
-      <body className="min-h-full flex" style={{ backgroundColor: "var(--background)" }}>
+      <body className="min-h-full" style={{ backgroundColor: "var(--background)" }}>
         <Providers>
           {children}
         </Providers>

@@ -170,7 +170,7 @@ export default function QuantitativosPage() {
         )}
 
         {/* Row 3: Other filters */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Categoria</label>
             <input
@@ -248,8 +248,8 @@ export default function QuantitativosPage() {
       )}
 
       {!isLoading && !isFetching && data && data.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
