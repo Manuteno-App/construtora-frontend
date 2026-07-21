@@ -53,7 +53,7 @@ export default function AtestadosPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/atestados/${id}`),
     onSuccess: () => {
-      toast.success("Atestado excluÃ­do com sucesso.");
+      toast.success("Atestado excluí­do com sucesso.");
       queryClient.invalidateQueries({ queryKey: ["atestados"] });
       setConfirmDelete(null);
     },
@@ -209,7 +209,7 @@ export default function AtestadosPage() {
                 <td colSpan={5}>
                   <EmptyState
                     title="Nenhum atestado encontrado"
-                    description="Envie um PDF para comeÃ§ar o processamento."
+                    description="Envie um PDF para começar o processamento."
                   />
                 </td>
               </tr>
