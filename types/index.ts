@@ -63,6 +63,7 @@ export interface ServicoExecutado {
   unitId?: string;
   unitSymbolRaw?: string;
   normalizedServiceKey?: string;
+  manualOverride?: boolean;
   quantidade?: number;
 }
 

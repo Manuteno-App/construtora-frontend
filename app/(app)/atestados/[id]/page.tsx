@@ -5,7 +5,7 @@ import { Skeleton, TableSkeleton } from "@/components/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
-import type { Atestado, Obra, ServicoExecutado } from "@/types";
+import type { Atestado, MeasurementUnit, Obra, ServicoExecutado } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -16,7 +16,7 @@ import {
   ExternalLink,
   Hash,
   MapPin,
-  RefreshCw
+  RefreshCw, Pencil, Plus, Check, X, ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -25,6 +25,9 @@ import { toast } from "sonner";
 
 type Tab = "entidades" | "servicos" | "info";
 
+type ServicoDraft = { codigo: string; descricao: string; categoria: string; quantidade: string; unidade: string };
+const emptyServicoDraft: ServicoDraft = { codigo: "", descricao: "", categoria: "", quantidade: "", unidade: "" };
+
 export default function AtestadoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -32,6 +35,9 @@ export default function AtestadoDetailPage() {
   const [tab, setTab] = useState<Tab>("entidades");
   const [categoriaFilter, setCategoriaFilter] = useState("");
   const [openingPdf, setOpeningPdf] = useState(false);
+  const [editingServicoId, setEditingServicoId] = useState<string | null>(null);
+  const [servicoDraft, setServicoDraft] = useState<ServicoDraft>(emptyServicoDraft);
+  const [showReindexWarning, setShowReindexWarning] = useState(false);
 
   const openPdf = async () => {
     setOpeningPdf(true);
@@ -68,7 +74,13 @@ export default function AtestadoDetailPage() {
           params: categoriaFilter ? { categoria: categoriaFilter } : {},
         })
         .then((r) => r.data),
-    enabled: tab === "servicos" && !!atestado && atestado.status === "DONE",
+    enabled: !!atestado && atestado.status === "DONE",
+  });
+
+  const { data: unidades = [] } = useQuery<MeasurementUnit[]>({
+    queryKey: ["measurement-units", "active"],
+    queryFn: () => api.get("/measurement-admin/units", { params: { status: "ACTIVE" } }).then((response) => response.data),
+    enabled: tab === "servicos",
   });
 
   const reindexMutation = useMutation({
@@ -80,11 +92,49 @@ export default function AtestadoDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const hasManualChanges = servicos?.some((service) => service.manualOverride) ?? false;
+
+  const requestReindex = () => {
+    if (hasManualChanges) { setShowReindexWarning(true); return; }
+    reindexMutation.mutate();
+  };
+
+  const confirmReindex = () => {
+    setShowReindexWarning(false);
+    reindexMutation.mutate();
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "entidades", label: "Entidades Extraídas" },
     { key: "servicos", label: "Serviços Executados" },
     { key: "info", label: "Informações" },
   ];
+
+  const saveServicoMutation = useMutation({
+    mutationFn: ({ serviceId, payload }: { serviceId?: string; payload: Omit<ServicoExecutado, "id" | "atestadoId"> }) =>
+      serviceId
+        ? api.patch(`/atestados/${id}/servicos/${serviceId}`, payload)
+        : api.post(`/atestados/${id}/servicos`, payload),
+    onSuccess: () => {
+      toast.success("Linha salva.");
+      queryClient.invalidateQueries({ queryKey: ["servicos", id] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const beginServicoEdit = (service?: ServicoExecutado) => {
+    setEditingServicoId(service?.id ?? "new");
+    setServicoDraft(service ? { codigo: service.codigo ?? "", descricao: service.descricao, categoria: service.categoria ?? "", quantidade: service.quantidade?.toString() ?? "", unidade: service.unidade ?? "" } : emptyServicoDraft);
+  };
+  const cancelServicoEdit = () => { setEditingServicoId(null); setServicoDraft(emptyServicoDraft); };
+  const updateServicoDraft = (field: keyof ServicoDraft, value: string) => setServicoDraft((current) => ({ ...current, [field]: value }));
+  const saveServicoEdit = () => {
+    if (!servicoDraft.descricao.trim()) { toast.error("Informe a descrição do serviço."); return; }
+    const quantidade = servicoDraft.quantidade.trim() ? Number(servicoDraft.quantidade.replace(",", ".")) : undefined;
+    if (quantidade !== undefined && (!Number.isFinite(quantidade) || quantidade < 0)) { toast.error("Informe uma quantidade válida."); return; }
+    saveServicoMutation.mutate({ serviceId: editingServicoId === "new" ? undefined : editingServicoId ?? undefined, payload: { descricao: servicoDraft.descricao.trim(), codigo: servicoDraft.codigo.trim() || undefined, categoria: servicoDraft.categoria.trim() || undefined, quantidade, unidade: servicoDraft.unidade.trim() || undefined } }, { onSuccess: cancelServicoEdit });
+  };
+
 
   // Unique categories from servicos
   const categories = servicos
@@ -125,7 +175,7 @@ export default function AtestadoDetailPage() {
               )}
             </div>
             <button
-              onClick={() => reindexMutation.mutate()}
+              onClick={requestReindex}
               disabled={reindexMutation.isPending}
               className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
@@ -272,6 +322,11 @@ export default function AtestadoDetailPage() {
       {/* ── Tab: Serviços ── */}
       {tab === "servicos" && (
         <div>
+          <div className="flex justify-end mb-4">
+            <button onClick={() => beginServicoEdit()} disabled={saveServicoMutation.isPending || atestado?.status !== "DONE"} className="flex items-center gap-2 px-3 py-2 text-sm text-white rounded-lg disabled:opacity-50" style={{ backgroundColor: "var(--primary)" }}>
+              <Plus size={14} /> Adicionar linha
+            </button>
+          </div>
           {/* Category filter */}
           {categories.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -311,9 +366,12 @@ export default function AtestadoDetailPage() {
             />
           )}
 
-          {servicos && servicos.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
+          {servicos && (servicos.length > 0 || editingServicoId === "new") && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+              <table className="w-full min-w-[900px] text-sm">
+                <colgroup>
+                  <col className="w-[12%]" /><col className="w-[36%]" /><col className="w-[20%]" /><col className="w-[12%]" /><col className="w-[10%]" /><col className="w-[10%]" />
+                </colgroup>
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Código</th>
@@ -321,11 +379,50 @@ export default function AtestadoDetailPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Categoria</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Qtd</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Un</th>
+                    <th className="px-4 py-3" aria-label="Ações" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
+                  {editingServicoId === "new" && (
+                    <tr className="bg-blue-50 border-y border-blue-100 shadow-inner">
+                      {(["codigo", "descricao", "categoria", "quantidade", "unidade"] as const).map((field) => <td key={field} className="px-2 py-2">{field === "unidade" ? (
+                        <div className="relative">
+                        <select className="h-9 w-full min-w-0 appearance-none rounded-md border border-blue-200 bg-white px-2.5 pr-8 text-sm font-medium text-gray-800 shadow-sm outline-none transition hover:border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={servicoDraft.unidade} onChange={(event) => updateServicoDraft("unidade", event.target.value)} aria-label="Unidade">
+                          <option value="">Selecione</option>
+                          {servicoDraft.unidade && !unidades.some((unidade) => unidade.canonicalSymbol === servicoDraft.unidade) && <option value={servicoDraft.unidade}>{servicoDraft.unidade}</option>}
+                          {unidades.map((unidade) => <option key={unidade.id} value={unidade.canonicalSymbol}>{unidade.canonicalSymbol} — {unidade.name}</option>)}
+                        </select>
+                        <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-500" />
+                      </div>
+                      ) : (
+                        <input className="h-9 w-full min-w-0 rounded-md border border-blue-200 bg-white px-2.5 text-sm text-gray-800 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={servicoDraft[field]} onChange={(event) => updateServicoDraft(field, event.target.value)} autoFocus={field === "descricao"} placeholder={field === "codigo" ? "Código" : field === "descricao" ? "Descrição do serviço" : field === "categoria" ? "Categoria" : "Quantidade"} type={field === "quantidade" ? "number" : "text"} min={field === "quantidade" ? 0 : undefined} step={field === "quantidade" ? "any" : undefined} inputMode={field === "quantidade" ? "decimal" : undefined} />
+                      )}
+</td>)}
+                      <td className="px-3 py-2 whitespace-nowrap"><div className="flex items-center justify-end gap-1"><button onClick={saveServicoEdit} disabled={saveServicoMutation.isPending} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-green-600 text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50" aria-label="Salvar linha" title="Salvar"><Check size={16} /></button><button onClick={cancelServicoEdit} disabled={saveServicoMutation.isPending} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-50" aria-label="Cancelar edição" title="Cancelar"><X size={16} /></button></div></td>
+                    </tr>
+                  )}
+
                   {servicos.map((s) => (
+                    editingServicoId === s.id ? (
+                    <tr key={s.id} className="bg-blue-50 border-y border-blue-100 shadow-inner">
+                      {(["codigo", "descricao", "categoria", "quantidade", "unidade"] as const).map((field) => <td key={field} className="px-2 py-2">{field === "unidade" ? (
+                        <div className="relative">
+                        <select className="h-9 w-full min-w-0 appearance-none rounded-md border border-blue-200 bg-white px-2.5 pr-8 text-sm font-medium text-gray-800 shadow-sm outline-none transition hover:border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={servicoDraft.unidade} onChange={(event) => updateServicoDraft("unidade", event.target.value)} aria-label="Unidade">
+                          <option value="">Selecione</option>
+                          {servicoDraft.unidade && !unidades.some((unidade) => unidade.canonicalSymbol === servicoDraft.unidade) && <option value={servicoDraft.unidade}>{servicoDraft.unidade}</option>}
+                          {unidades.map((unidade) => <option key={unidade.id} value={unidade.canonicalSymbol}>{unidade.canonicalSymbol} — {unidade.name}</option>)}
+                        </select>
+                        <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-500" />
+                      </div>
+                      ) : (
+                        <input className="h-9 w-full min-w-0 rounded-md border border-blue-200 bg-white px-2.5 text-sm text-gray-800 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" value={servicoDraft[field]} onChange={(event) => updateServicoDraft(field, event.target.value)} autoFocus={field === "descricao"} placeholder={field === "codigo" ? "Código" : field === "descricao" ? "Descrição do serviço" : field === "categoria" ? "Categoria" : "Quantidade"} type={field === "quantidade" ? "number" : "text"} min={field === "quantidade" ? 0 : undefined} step={field === "quantidade" ? "any" : undefined} inputMode={field === "quantidade" ? "decimal" : undefined} />
+                      )}
+</td>)}
+                      <td className="px-3 py-2 whitespace-nowrap"><div className="flex items-center justify-end gap-1"><button onClick={saveServicoEdit} disabled={saveServicoMutation.isPending} className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-green-600 text-white shadow-sm transition hover:bg-green-700 disabled:opacity-50" aria-label="Salvar linha" title="Salvar"><Check size={16} /></button><button onClick={cancelServicoEdit} disabled={saveServicoMutation.isPending} className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-50" aria-label="Cancelar edição" title="Cancelar"><X size={16} /></button></div></td>
+                    </tr>
+                  ) : (
                     <tr key={s.id} className="hover:bg-gray-50">
+
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">
                         {s.codigo ?? "—"}
                       </td>
@@ -335,8 +432,9 @@ export default function AtestadoDetailPage() {
                         {s.quantidade != null ? formatNumber(s.quantidade, 4) : "—"}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-500">{s.unidade ?? "—"}</td>
+                      <td className="px-4 py-3 text-right"><button onClick={() => beginServicoEdit(s)} disabled={saveServicoMutation.isPending} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-gray-500 transition hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50" aria-label="Editar linha"><Pencil size={14} /></button></td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>
@@ -364,6 +462,19 @@ export default function AtestadoDetailPage() {
               </div>
             ))}
           </dl>
+        </div>
+      )}
+      {showReindexWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="reindex-warning-title">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700"><RefreshCw size={18} /></div>
+            <h2 id="reindex-warning-title" className="text-lg font-semibold text-gray-900">Reprocessar e substituir alterações?</h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">Este atestado possui linhas incluídas ou corrigidas manualmente. O reprocessamento lerá o PDF novamente e substituirá essas alterações.</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setShowReindexWarning(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">Cancelar</button>
+              <button onClick={confirmReindex} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-700">Reprocessar mesmo assim</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
