@@ -29,13 +29,13 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, sans-serif;
 }
 
 @media (min-width: 1024px) {
   body > main {
     flex: none;
-    width: calc(100vw - 16rem);
-    margin-left: 16rem;
+    width: calc(100vw - 262px);
+    margin-left: 262px;
   }
 }

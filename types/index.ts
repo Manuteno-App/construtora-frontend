@@ -227,6 +227,7 @@ export interface QualificationSource {
 export interface ResolvedDescricao {
   descricao: string;
   score: number;
+  unidadeSugerida?: string;
 }
 
 export interface ServiceRequirement {

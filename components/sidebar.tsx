@@ -28,7 +28,7 @@ export default function Sidebar() {
         <button onClick={() => setIsOpen(true)} className="p-2 text-white" aria-label="Abrir menu"><Menu size={22} /></button>
       </header>
       {isOpen && <button className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setIsOpen(false)} aria-label="Fechar menu" />}
-      <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform lg:w-64 lg:translate-x-0", isOpen ? "translate-x-0" : "-translate-x-full")} style={{ backgroundColor: "var(--dark-navy)" }}>
+      <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-72 flex-col transition-transform lg:w-[262px] lg:translate-x-0", isOpen ? "translate-x-0" : "-translate-x-full")} style={{ backgroundColor: "var(--dark-navy)" }}>
         <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10"><div className="w-8 h-8 rounded flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: "var(--primary)" }}>CS</div><div><p className="text-white font-semibold text-sm leading-tight">Construtora Sucesso</p><p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>Document Intelligence</p></div></div>
         <button onClick={() => setIsOpen(false)} className="absolute right-3 top-4 p-2 text-white/70 lg:hidden" aria-label="Fechar menu"><X size={20} /></button>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
