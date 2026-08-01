@@ -216,6 +216,18 @@ function coverageStatus(item: ServiceCoverage) {
     return { label: "Não atendido", mark: "×", tone: "no" as const };
   return { label: "Parcial", mark: "!", tone: "partial" as const };
 }
+
+function criterionMessage(item: ServiceCoverage) {
+  if (item.failureReason === "NO_MATCHES") return "serviço inexistente na base";
+  if (item.failureReason === "MAX_ATESTADOS_EXCEEDED") return "quantidade completa, bloqueada pelo limite";
+  if (item.failureReason === "INSUFFICIENT_QUANTITY") return String(format(item.percentualCobertura ?? 0)) + "% da quantidade exigida";
+  const used = item.usedAtestadosCount ?? 0;
+  const hasConversion = (item.selectedAtestados ?? []).some((source) =>
+    (source.servicos ?? []).some((service) => service.conversionKind && service.conversionKind !== "DIRECT"),
+  );
+  if (hasConversion) return "com ressalva de conversão";
+  return used <= 1 ? "1 atestado basta" : String(used) + " atestados somados";
+}
 const tone = (kind: "ok" | "partial" | "no") =>
   kind === "ok"
     ? "bg-emerald-100 text-emerald-700"
@@ -364,6 +376,7 @@ function Result({
   onOpen: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [showCriteria, setShowCriteria] = useState(false);
   const [filter, setFilter] = useState<"all" | "ok" | "partial" | "no">("all");
   const stats = useMemo(
     () =>
@@ -380,9 +393,9 @@ function Result({
     (item) => filter === "all" || coverageStatus(item).tone === filter,
   );
   const documents = useMemo(() => {
-    const list = result.selectedAtestados.length
-      ? result.selectedAtestados
-      : result.coverageByService.flatMap((item) => item.qualifyingAtestados);
+    const list = result.coverageByService.flatMap(
+      (item) => item.matchingAtestados ?? item.qualifyingAtestados,
+    );
     return Array.from(
       new Map(list.map((item) => [item.atestadoId, item])).values(),
     ).slice(0, 12);
@@ -432,10 +445,29 @@ function Result({
               {subtitle}
             </p>
           </div>
-          <span className="text-xs text-gray-400">
-            {result.usedAtestadosCount} usado(s)
-          </span>
+          <button
+            type="button"
+            onClick={() => setShowCriteria((value) => !value)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            <span className="mr-2 text-[10px]">{showCriteria ? "⌄" : "▸"}</span>
+            {showCriteria ? "ocultar" : "ver"} critério a critério
+          </button>
         </div>
+        {showCriteria && (
+          <div className="mt-4 border-t border-gray-200 pt-3">
+            {result.coverageByService.map((item, index) => {
+              const state = coverageStatus(item);
+              return (
+                <button key={item.serviceQuery} type="button" onClick={() => setExpanded(item.serviceQuery)} className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-gray-50">
+                  <span className={`grid h-5 w-5 place-items-center rounded text-[11px] font-bold ${tone(state.tone)}`}>{index + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{item.serviceQuery}</span>
+                  <span className="text-xs text-gray-400">{state.label} · {criterionMessage(item)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {(
             [
