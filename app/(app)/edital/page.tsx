@@ -316,12 +316,18 @@ function Detail({
           limite de atestados.
         </p>
       )}
+      {item.failureReason === "INSUFFICIENT_QUANTITY" && (
+        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Cobertura parcial: <b>{format(item.totalQuantidade)} {requirement?.unidade}</b> de {format(item.quantidadeExigida ?? requirement?.minQuantidade)} {requirement?.unidade}
+          {item.percentualCobertura != null ? <> · <b>{format(item.percentualCobertura)}%</b></> : null}.
+        </p>
+      )}
       {item.failureReason === "NO_MATCHES" && (
         <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
           Nenhum atestado da base contém este serviço.
         </p>
       )}
-      {(selected.length > 0 || item.qualifyingAtestados.length > 0) && (
+      {(selected.length > 0 || item.qualifyingAtestados.length > 0 || (item.matchingAtestados?.length ?? 0) > 0) && (
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <p className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             {selected.length
@@ -382,6 +388,20 @@ function Result({
     ).slice(0, 12);
   }, [result]);
 
+  const headline = result.bundleModeApplied === "MANY"
+    ? `${stats.ok} de ${result.coverageByService.length} critérios atendidos`
+    : stats.no > 0
+      ? "Não atende"
+      : result.fullyQualified
+        ? "Um atestado atende todos os critérios"
+        : `Nenhum atestado atende os ${result.coverageByService.length} sozinho`;
+  const subtitle = result.bundleModeApplied === "MANY"
+    ? "Cada critério resolve com seus próprios atestados."
+    : stats.no > 0
+      ? `${stats.no} critério(s) não existem na base — nenhuma combinação resolve`
+      : result.fullyQualified
+        ? "Qualquer um deles serve."
+        : `O melhor candidato atende ${stats.ok} de ${result.coverageByService.length} critérios.`;
   return (
     <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-5 py-3">
@@ -406,16 +426,10 @@ function Result({
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold text-gray-900">
-              {result.fullyQualified
-                ? result.bundleModeApplied === "ONE"
-                  ? "Um atestado atende todos os critérios"
-                  : "Todos os critérios atendidos"
-                : "Cobertura parcial ou fora do limite"}
+              {headline}
             </h3>
             <p className="text-sm text-gray-500">
-              {result.bundleModeApplied === "MANY"
-                ? "Cada critério resolve com seus próprios atestados."
-                : "A avaliação considera um conjunto comum de documentos."}
+              {subtitle}
             </p>
           </div>
           <span className="text-xs text-gray-400">
