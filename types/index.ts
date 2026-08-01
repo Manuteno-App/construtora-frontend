@@ -251,9 +251,13 @@ export type QualificationFailureReason =
 export interface ServiceCoverage {
   serviceQuery: string;
   resolvedDescricoes: string[];
+  matchingAtestados?: QualificationSource[];
   qualifyingAtestados: QualificationSource[];
   selectedAtestados?: QualificationSource[];
   totalQuantidade?: number;
+  quantidadeExigida?: number;
+  percentualCobertura?: number;
+  status?: "ATENDIDO" | "PARCIAL" | "NAO_ATENDIDO";
   usedAtestadosCount?: number;
   proofModeApplied?: ProofMode;
   maxAtestados?: number;

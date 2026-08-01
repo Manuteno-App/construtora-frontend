@@ -325,10 +325,10 @@ function Detail({
         <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <p className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
             {selected.length
-              ? "Evidências usadas na comprovação"
+              ? "Evidências encontradas (inclui as usadas na comprovação)"
               : "Atestados encontrados"}
           </p>
-          {(selected.length ? selected : item.qualifyingAtestados).map(
+          {(item.matchingAtestados ?? item.qualifyingAtestados).map(
             (source) => (
               <Evidence
                 key={source.atestadoId}
