@@ -211,6 +211,9 @@ export interface ServicoBuscado {
   unidadeComparada?: string;
   conversionKind?: "DIRECT" | "MATHEMATICAL" | "TECHNICAL";
   conversionFactor?: number;
+  itemCode?: string;
+  pageNumber?: number;
+  matchConfidence?: "HIGH" | "MEDIUM";
 }
 export type ServiceMatchType = "EXATA" | "POR_TERMOS" | "TEXTUAL_FORTE";
 
@@ -225,6 +228,8 @@ export interface QualificationSource {
   valor?: number;
   contratoNumero?: string;
   servicos?: ServicoBuscado[];
+  selectionRole?: "MEETS_ALONE" | "USED_IN_SUM" | "USED_WITH_APPROXIMATION" | "AVAILABLE_UNUSED";
+  hasCaveat?: boolean;
 }
 
 export interface ResolvedDescricao {
@@ -234,6 +239,7 @@ export interface ResolvedDescricao {
 }
 
 export interface ServiceRequirement {
+  criterionKey?: string;
   query: string;
   minQuantidade?: number;
   unidade?: string;
@@ -249,12 +255,16 @@ export type QualificationFailureReason =
   | "MAX_ATESTADOS_EXCEEDED";
 
 export interface ServiceCoverage {
+  criterionKey?: string;
   serviceQuery: string;
   resolvedDescricoes: string[];
   matchingAtestados?: QualificationSource[];
   qualifyingAtestados: QualificationSource[];
   selectedAtestados?: QualificationSource[];
   totalQuantidade?: number;
+  selectedTotalQuantidade?: number;
+  availableTotalQuantidade?: number;
+  matchingAtestadosCount?: number;
   quantidadeExigida?: number;
   percentualCobertura?: number;
   status?: "ATENDIDO" | "PARCIAL" | "NAO_ATENDIDO";
@@ -295,6 +305,12 @@ export interface BundleEvaluationResult {
   coverageByService: ServiceCoverage[];
   fullyQualified: boolean;
   exceededMaxAtestados: boolean;
+  candidateAtestados?: QualificationSource[];
+  conjunctionCandidateCount?: number;
+  bestCandidateCoverageCount?: number;
+  totalAtestadosBase?: number;
+  matchingAtestadosCount?: number;
+  elapsedMs?: number;
 }
 
 export interface QualificationRequest {

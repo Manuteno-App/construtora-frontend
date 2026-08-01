@@ -8,15 +8,15 @@ import type {
   MeasurementUnit,
   ProofMode,
   QualificationFilters,
-  QualificationSource,
   ResolvedDescricao,
   ServiceCoverage,
   ServiceRequirement,
 } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ExternalLink, Plus, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { QualificationResult } from "./_components/qualification-result";
 
 type Criterion = {
   id: number;
@@ -71,10 +71,6 @@ const criterion = (): Criterion => ({
 });
 
 
-const format = (value?: number) =>
-  value == null
-    ? "—"
-    : value.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 const parseDecimal = (value: string) => {
   const normalized = value.includes(",") ? value.replaceAll(".", "").replace(",", ".") : value;
   return Number(normalized);
@@ -209,413 +205,6 @@ function UnitAutocomplete({
   );
 }
 
-function coverageStatus(item: ServiceCoverage) {
-  if (item.qualified)
-    return { label: "Atendido", mark: "✓", tone: "ok" as const };
-  if (item.failureReason === "NO_MATCHES")
-    return { label: "Não atendido", mark: "×", tone: "no" as const };
-  return { label: "Parcial", mark: "!", tone: "partial" as const };
-}
-
-function criterionMessage(item: ServiceCoverage) {
-  if (item.failureReason === "NO_MATCHES") return "serviço inexistente na base";
-  if (item.failureReason === "MAX_ATESTADOS_EXCEEDED") return "quantidade completa, bloqueada pelo limite";
-  if (item.failureReason === "INSUFFICIENT_QUANTITY") return String(format(item.percentualCobertura ?? 0)) + "% da quantidade exigida";
-  const used = item.usedAtestadosCount ?? 0;
-  const hasConversion = (item.selectedAtestados ?? []).some((source) =>
-    (source.servicos ?? []).some((service) => service.conversionKind && service.conversionKind !== "DIRECT"),
-  );
-  if (hasConversion) return "com ressalva de conversão";
-  return used <= 1 ? "1 atestado basta" : String(used) + " atestados somados";
-}
-const tone = (kind: "ok" | "partial" | "no") =>
-  kind === "ok"
-    ? "bg-emerald-100 text-emerald-700"
-    : kind === "partial"
-      ? "bg-amber-100 text-amber-800"
-      : "bg-rose-100 text-rose-700";
-const borderTone = (kind: "ok" | "partial" | "no") =>
-  kind === "ok"
-    ? "border-l-emerald-500"
-    : kind === "partial"
-      ? "border-l-amber-400"
-      : "border-l-rose-500";
-
-function Evidence({
-  source,
-  onOpen,
-}: {
-  source: QualificationSource;
-  onOpen: (id: string) => void;
-}) {
-  return (
-    <div className="border-b border-gray-100 px-4 py-3 last:border-0">
-      <div className="flex flex-wrap gap-3">
-        <div className="min-w-0 flex-1">
-          <b className="text-sm text-gray-800">
-            {source.obraNome || source.filename}
-          </b>
-          <span className="mt-0.5 block text-xs text-gray-500">
-            {source.filename}
-            {source.local ? ` · ${source.local}` : ""}
-            {source.dataInicio ? ` · ${source.dataInicio}` : ""}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onOpen(source.atestadoId)}
-          className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 hover:underline"
-        >
-          <ExternalLink size={13} /> PDF
-        </button>
-      </div>
-      {(source.servicos ?? []).map((service, i) => (
-        <div
-          key={i}
-          className="mt-2 flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs"
-        >
-          <span className="font-medium text-gray-700">
-            “{service.descricao}”
-          </span>
-          <span className="text-gray-600">
-            {format(service.quantidade)}{" "}
-            {service.unidadeOriginal ?? service.unidade}
-          </span>
-          {service.conversionKind && service.conversionKind !== "DIRECT" && (
-            <span className="font-medium text-amber-700">
-              = {format(service.quantidadeConvertida)}{" "}
-              {service.unidadeComparada} · conversão
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Detail({
-  item,
-  requirement,
-  onOpen,
-}: {
-  item: ServiceCoverage;
-  requirement?: ServiceRequirement;
-  onOpen: (id: string) => void;
-}) {
-  const selected = item.selectedAtestados ?? [];
-  return (
-    <div className="border-t border-gray-200 bg-gray-50 px-5 py-4">
-      <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-        <span>
-          Regra: <b>{MODE_LABEL[item.proofModeApplied ?? "MANY"]}</b>
-        </span>
-        <span>
-          Atestados usados: <b>{item.usedAtestadosCount ?? 0}</b>
-        </span>
-        {requirement?.minQuantidade != null && (
-          <span>
-            Soma:{" "}
-            <b>
-              {format(item.totalQuantidade)} {requirement.unidade}
-            </b>{" "}
-            de {format(requirement.minQuantidade)}
-          </span>
-        )}
-      </div>
-      {item.failureReason === "MAX_ATESTADOS_EXCEEDED" && (
-        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          A quantidade exigida foi encontrada, mas a comprovação ultrapassa o
-          limite de atestados.
-        </p>
-      )}
-      {item.failureReason === "INSUFFICIENT_QUANTITY" && (
-        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Cobertura parcial: <b>{format(item.totalQuantidade)} {requirement?.unidade}</b> de {format(item.quantidadeExigida ?? requirement?.minQuantidade)} {requirement?.unidade}
-          {item.percentualCobertura != null ? <> · <b>{format(item.percentualCobertura)}%</b></> : null}.
-        </p>
-      )}
-      {item.failureReason === "NO_MATCHES" && (
-        <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          Nenhum atestado da base contém este serviço.
-        </p>
-      )}
-      {(selected.length > 0 || item.qualifyingAtestados.length > 0 || (item.matchingAtestados?.length ?? 0) > 0) && (
-        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <p className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            {selected.length
-              ? "Evidências encontradas (inclui as usadas na comprovação)"
-              : "Atestados encontrados"}
-          </p>
-          {(item.matchingAtestados ?? item.qualifyingAtestados).map(
-            (source) => (
-              <Evidence
-                key={source.atestadoId}
-                source={source}
-                onOpen={onOpen}
-              />
-            ),
-          )}
-        </section>
-      )}
-      {item.resolvedDescricoes.length > 0 && (
-        <p className="mt-3 text-xs text-gray-500">
-          Termos relacionados: {item.resolvedDescricoes.join(", ")}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Result({
-  result,
-  requirements,
-  onOpen,
-}: {
-  result: BundleEvaluationResult;
-  requirements: ServiceRequirement[];
-  onOpen: (id: string) => void;
-}) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [showCriteria, setShowCriteria] = useState(false);
-  const [filter, setFilter] = useState<"all" | "ok" | "partial" | "no">("all");
-  const stats = useMemo(
-    () =>
-      result.coverageByService.reduce(
-        (acc, item) => {
-          acc[coverageStatus(item).tone]++;
-          return acc;
-        },
-        { ok: 0, partial: 0, no: 0 },
-      ),
-    [result],
-  );
-  const entries = result.coverageByService.filter(
-    (item) => filter === "all" || coverageStatus(item).tone === filter,
-  );
-  const documents = useMemo(() => {
-    const list = result.coverageByService.flatMap(
-      (item) => item.matchingAtestados ?? item.qualifyingAtestados,
-    );
-    return Array.from(
-      new Map(list.map((item) => [item.atestadoId, item])).values(),
-    ).slice(0, 12);
-  }, [result]);
-
-  const headline = result.bundleModeApplied === "MANY"
-    ? `${stats.ok} de ${result.coverageByService.length} critérios atendidos`
-    : stats.no > 0
-      ? "Não atende"
-      : result.fullyQualified
-        ? "Um atestado atende todos os critérios"
-        : `Nenhum atestado atende os ${result.coverageByService.length} sozinho`;
-  const subtitle = result.bundleModeApplied === "MANY"
-    ? "Cada critério resolve com seus próprios atestados."
-    : stats.no > 0
-      ? `${stats.no} critério(s) não existem na base — nenhuma combinação resolve`
-      : result.fullyQualified
-        ? "Qualquer um deles serve."
-        : `O melhor candidato atende ${stats.ok} de ${result.coverageByService.length} critérios.`;
-  return (
-    <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-      <div className="border-b border-gray-200 px-5 py-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Resultado —{" "}
-            {result.bundleModeApplied === "MANY"
-              ? "cada critério com seus próprios atestados"
-              : "todos os critérios no mesmo conjunto"}
-          </h2>
-          <span className="ml-auto text-xs text-gray-400">
-            {documents.length} atestados encontrados
-          </span>
-        </div>
-      </div>
-      <div className="border-b border-gray-200 px-5 py-4">
-        <div className="flex flex-wrap items-start gap-3">
-          <span
-            className={`grid h-8 w-8 place-items-center rounded-lg font-bold ${result.fullyQualified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}
-          >
-            {result.fullyQualified ? "✓" : "!"}
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-gray-900">
-              {headline}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {subtitle}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowCriteria((value) => !value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-          >
-            <span className="mr-2 text-[10px]">{showCriteria ? "⌄" : "▸"}</span>
-            {showCriteria ? "ocultar" : "ver"} critério a critério
-          </button>
-        </div>
-        {showCriteria && (
-          <div className="mt-4 border-t border-gray-200 pt-3">
-            {result.coverageByService.map((item, index) => {
-              const state = coverageStatus(item);
-              return (
-                <button key={item.serviceQuery} type="button" onClick={() => setExpanded(item.serviceQuery)} className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-gray-50">
-                  <span className={`grid h-5 w-5 place-items-center rounded text-[11px] font-bold ${tone(state.tone)}`}>{index + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{item.serviceQuery}</span>
-                  <span className="text-xs text-gray-400">{state.label} · {criterionMessage(item)}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(
-            [
-              ["ok", "atendidos", stats.ok],
-              ["partial", "parcialmente atendidos", stats.partial],
-              ["no", "não atendidos", stats.no],
-            ] as const
-          ).map(([kind, label, count]) => (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => setFilter(filter === kind ? "all" : kind)}
-              className={`rounded-xl border px-3 py-2 text-left ${filter === kind ? "border-orange-400 ring-2 ring-orange-100" : "border-gray-200"}`}
-            >
-              <b
-                className={
-                  kind === "ok"
-                    ? "text-emerald-700"
-                    : kind === "partial"
-                      ? "text-amber-700"
-                      : "text-rose-700"
-                }
-              >
-                {count}
-              </b>
-              <span className="ml-2 text-xs text-gray-500">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      {result.bundleModeApplied === "MANY" && documents.length > 0 && (
-        <div className="overflow-x-auto border-b border-gray-200">
-          <div className="min-w-[760px]">
-            <div className="grid grid-cols-[minmax(300px,1fr)_repeat(12,44px)] border-b border-gray-200 bg-gray-50 text-xs text-gray-400">
-              <div className="sticky left-0 z-10 bg-gray-50 px-5 py-3 font-semibold uppercase">
-                Critério
-              </div>
-              {documents.map((doc, i) => (
-                <div
-                  key={doc.atestadoId}
-                  title={doc.filename}
-                  className="grid place-items-center border-l border-gray-100 py-3"
-                >
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-            {entries.map((item, index) => {
-              const state = coverageStatus(item);
-              return (
-                <div
-                  key={item.serviceQuery}
-                  className="grid grid-cols-[minmax(300px,1fr)_repeat(12,44px)] border-b border-gray-100 last:border-0"
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpanded(
-                        expanded === item.serviceQuery
-                          ? null
-                          : item.serviceQuery,
-                      )
-                    }
-                    className="sticky left-0 z-10 flex items-center gap-2 bg-white px-5 py-3 text-left hover:bg-orange-50"
-                  >
-                    <span
-                      className={`grid h-5 w-5 place-items-center rounded text-xs ${tone(state.tone)}`}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className="truncate text-sm font-medium text-gray-800">
-                      {item.serviceQuery}
-                    </span>
-                  </button>
-                  {documents.map((doc) => {
-                    const used = (item.selectedAtestados ?? []).some(
-                      (x) => x.atestadoId === doc.atestadoId,
-                    );
-                    const has = item.qualifyingAtestados.some(
-                      (x) => x.atestadoId === doc.atestadoId,
-                    );
-                    return (
-                      <div
-                        key={doc.atestadoId}
-                        className={`grid place-items-center border-l border-gray-100 text-sm ${used ? "bg-emerald-50 text-emerald-700" : has ? "bg-orange-50 text-orange-600" : "text-gray-200"}`}
-                      >
-                        {used ? "✓" : has ? "·" : ""}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      <div>
-        {entries.map((item, index) => {
-          const state = coverageStatus(item);
-          const isOpen = expanded === item.serviceQuery;
-          return (
-            <article
-              key={item.serviceQuery}
-              className={`border-b border-l-4 ${borderTone(state.tone)} border-gray-200 last:border-b-0`}
-            >
-              <button
-                type="button"
-                onClick={() => setExpanded(isOpen ? null : item.serviceQuery)}
-                className="flex w-full items-center gap-3 px-5 py-4 text-left hover:bg-gray-50"
-              >
-                <span
-                  className={`grid h-6 w-6 place-items-center rounded-md text-xs font-bold ${tone(state.tone)}`}
-                >
-                  {index + 1}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <b className="block text-sm text-gray-800">
-                    {item.serviceQuery}
-                  </b>
-                  <small className="text-gray-500">
-                    {state.label}
-                    {item.totalQuantidade != null
-                      ? ` · total ${format(item.totalQuantidade)}`
-                      : ""}
-                  </small>
-                </span>
-                <ChevronDown
-                  size={16}
-                  className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-              {isOpen && (
-                <Detail
-                  item={item}
-                  requirement={requirements.find(
-                    (r) => r.query === item.serviceQuery,
-                  )}
-                  onOpen={onOpen}
-                />
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export default function EditalPage() {
   const [bundleMode, setBundleMode] = useState<ProofMode>("MANY");
   const [bundleMax, setBundleMax] = useState("");
@@ -658,6 +247,7 @@ export default function EditalPage() {
     )
       return toast.error("Informe o limite global.");
     if (
+      bundleMode === "MANY" &&
       valid.some(
         (item) =>
           item.proofMode === "MAX" &&
@@ -676,6 +266,7 @@ export default function EditalPage() {
       ...(minValor ? { minValor: Number(minValor) } : {}),
     };
     const services: ServiceRequirement[] = valid.map((item) => ({
+      criterionKey: String(item.id),
       query: item.query.trim(),
       ...(item.minQuantidade
         ? { minQuantidade: parseDecimal(item.minQuantidade) }
@@ -697,15 +288,49 @@ export default function EditalPage() {
       filters,
     });
   };
-  const openPdf = async (id: string) => {
+  const openPdf = async (id: string, pageNumber?: number) => {
     try {
       const { data: response } = await api.get(`/atestados/${id}/signed-url`);
-      window.open(response.url, "_blank", "noopener,noreferrer");
+      const target = pageNumber ? `${response.url}#page=${pageNumber}` : response.url;
+      window.open(target, "_blank", "noopener,noreferrer");
     } catch {
       toast.error("Não foi possível abrir o PDF.");
     }
   };
+  const allowLimit = (item: ServiceCoverage) => {
+    const count = item.usedAtestadosCount ?? 0;
+    if (!submitted || count < 1) return;
+    if (submitted.bundleMode === "MAX") {
+      setBundleMax(String(count));
+      setSubmitted({ ...submitted, maxAtestados: count });
+      return;
+    }
+    const key = item.criterionKey;
+    setCriteria((list) => list.map((criterionItem) =>
+      String(criterionItem.id) === key
+        ? { ...criterionItem, proofMode: "MAX", maxAtestados: String(count) }
+        : criterionItem,
+    ));
+    setSubmitted({
+      ...submitted,
+      services: submitted.services.map((service) =>
+        service.criterionKey === key
+          ? { ...service, proofMode: "MAX", maxAtestados: count }
+          : service,
+      ),
+    });
+  };
 
+  const useMany = () => {
+    if (!submitted) return;
+    setBundleMode("MANY");
+    setCriteria((list) => list.map((item) => ({ ...item, proofMode: "MANY" })));
+    setSubmitted({
+      bundleMode: "MANY",
+      services: submitted.services.map((service) => ({ ...service, proofMode: "MANY", maxAtestados: undefined })),
+      filters: submitted.filters,
+    });
+  };
   return (
     <main className="mx-auto max-w-7xl pb-16">
       <header className="mb-5">
@@ -774,7 +399,10 @@ export default function EditalPage() {
               <button
                 key={mode}
                 type="button"
-                onClick={() => setBundleMode(mode)}
+                onClick={() => {
+                  setBundleMode(mode);
+                  setSubmitted(null);
+                }}
                 className={`rounded-full border px-4 py-2 text-sm ${bundleMode === mode ? "border-orange-500 bg-orange-50 font-semibold text-orange-700" : "border-gray-200 text-gray-600"}`}
               >
                 {MODE_LABEL[mode]}
@@ -799,7 +427,7 @@ export default function EditalPage() {
                 : "O conjunto comum precisa respeitar o limite de atestados."}
           </p>
         </section>
-        <section className="rounded-xl border border-gray-200 bg-white p-5">
+        <section id="criteria-editor" className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="mb-4 flex items-baseline justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
               Serviços e quantitativos exigidos
@@ -856,6 +484,32 @@ export default function EditalPage() {
                     <X size={16} />
                   </button>
                 </div>
+                {bundleMode === "MANY" && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2 pl-11">
+                    <span className="mr-1 text-[11px] text-gray-400">Regra deste critério:</span>
+                    {(["ONE", "MANY", "MAX"] as ProofMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => update(item.id, "proofMode", mode)}
+                        className={`rounded-full border px-3 py-1 text-[11px] ${item.proofMode === mode ? "border-orange-400 bg-orange-50 font-semibold text-orange-700" : "border-gray-200 text-gray-500"}`}
+                      >
+                        {MODE_LABEL[mode]}
+                      </button>
+                    ))}
+                    {item.proofMode === "MAX" && (
+                      <input
+                        value={item.maxAtestados}
+                        onChange={(event) => update(item.id, "maxAtestados", event.target.value)}
+                        type="number"
+                        min="1"
+                        aria-label={`Limite de atestados do critério ${index + 1}`}
+                        placeholder="Limite"
+                        className="w-24 rounded-lg border border-gray-200 px-3 py-1 text-xs"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -885,10 +539,12 @@ export default function EditalPage() {
           </div>
         )}
         {!busy && data && (
-          <Result
+          <QualificationResult
             result={data}
             requirements={submitted?.services ?? []}
             onOpen={openPdf}
+            onAllowLimit={allowLimit}
+            onUseMany={useMany}
           />
         )}
       </div>
