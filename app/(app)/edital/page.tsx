@@ -70,10 +70,15 @@ const criterion = (): Criterion => ({
   maxAtestados: "",
 });
 
+
 const format = (value?: number) =>
   value == null
     ? "—"
     : value.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+const parseDecimal = (value: string) => {
+  const normalized = value.includes(",") ? value.replaceAll(".", "").replace(",", ".") : value;
+  return Number(normalized);
+};
 
 function ServiceAutocomplete({
   value,
@@ -627,7 +632,7 @@ export default function EditalPage() {
     const services: ServiceRequirement[] = valid.map((item) => ({
       query: item.query.trim(),
       ...(item.minQuantidade
-        ? { minQuantidade: Number(item.minQuantidade) }
+        ? { minQuantidade: parseDecimal(item.minQuantidade) }
         : {}),
       ...(item.unidade ? { unidade: item.unidade } : {}),
       ...(bundleMode === "MANY"
@@ -787,8 +792,8 @@ export default function EditalPage() {
                       onChange={(e) =>
                         update(item.id, "minQuantidade", e.target.value)
                       }
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Qtd. mínima"
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm md:w-32"
                     />
@@ -805,33 +810,6 @@ export default function EditalPage() {
                     <X size={16} />
                   </button>
                 </div>
-                {bundleMode === "MANY" && (
-                  <div className="flex flex-wrap items-center gap-2 px-4 pb-2 text-xs">
-                    <span className="text-gray-400">Comprovação:</span>
-                    {(["ONE", "MANY", "MAX"] as ProofMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => update(item.id, "proofMode", mode)}
-                        className={`rounded-full border px-3 py-1 ${item.proofMode === mode ? "border-orange-400 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-500"}`}
-                      >
-                        {MODE_LABEL[mode]}
-                      </button>
-                    ))}
-                    {item.proofMode === "MAX" && (
-                      <input
-                        value={item.maxAtestados}
-                        onChange={(e) =>
-                          update(item.id, "maxAtestados", e.target.value)
-                        }
-                        type="number"
-                        min="1"
-                        placeholder="Limite"
-                        className="w-20 rounded-lg border border-gray-200 px-2 py-1"
-                      />
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>
