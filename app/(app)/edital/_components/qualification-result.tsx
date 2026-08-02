@@ -1,11 +1,13 @@
 "use client";
 
+import api from "@/lib/api";
 import type {
   BundleEvaluationResult,
   QualificationSource,
   ServiceCoverage,
   ServiceRequirement,
 } from "@/types";
+import { useMutation } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ChevronDown,
@@ -14,8 +16,6 @@ import {
   LockKeyhole,
   Upload,
 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import api from "@/lib/api";
 
 import { useMemo, useState } from "react";
 type Tone = "ok" | "partial" | "no";
@@ -161,6 +161,14 @@ function EvidenceCard({
                     </small>
                   )}
               </span>
+              {service.conversionUnavailableReason && (
+                <small className="block font-normal text-rose-700">
+                  {service.conversionUnavailableReason ===
+                  "TECHNICAL_RULE_MISSING"
+                    ? "sem regra técnica para esta conversão"
+                    : "não foi possível identificar a unidade para conversão"}
+                </small>
+              )}
               <button
                 type="button"
                 onClick={() => onOpen(source.atestadoId, service.pageNumber)}
@@ -220,6 +228,9 @@ function Caveats({ item }: { item: ServiceCoverage }) {
   const conversion = services.find(
     ({ service }) => service.conversionKind === "TECHNICAL",
   );
+  const unavailableConversion = services.find(
+    ({ service }) => service.conversionUnavailableReason,
+  );
   const semantic = services.find(
     ({ service }) => service.matchConfidence === "MEDIUM",
   );
@@ -229,10 +240,25 @@ function Caveats({ item }: { item: ServiceCoverage }) {
         <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle size={15} className="mt-0.5 flex-none" />
           <span>
-            Conversão aproximada em <b>{conversion.source.filename}</b>: o
-            documento registra <b>{conversion.service.unidadeOriginal}</b> e o
-            critério compara em <b>{conversion.service.unidadeComparada}</b>.
-            Confirme a premissa antes da habilitação.
+            Conversao aproximada em <b>{conversion.source.filename}</b>: the
+            document uses <b>{conversion.service.unidadeOriginal}</b> and the
+            criterion compares in <b>{conversion.service.unidadeComparada}</b>.
+            Confirme a premissa antes da habilitacao.
+          </span>
+        </div>
+      )}
+      {unavailableConversion && (
+        <div className="mt-2 flex gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
+          <AlertTriangle size={15} className="mt-0.5 flex-none" />
+          <span>
+            Nao ha regra tecnica para converter{" "}
+            <b>
+              {unavailableConversion.service.unidadeOriginal ??
+                unavailableConversion.service.unidade}
+            </b>{" "}
+            to <b>{unavailableConversion.service.unidadeComparada}</b>. This
+            document is displayed but is not included in the calculation until a
+            rule is created or approved.
           </span>
         </div>
       )}
@@ -240,15 +266,15 @@ function Caveats({ item }: { item: ServiceCoverage }) {
         <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle size={15} className="mt-0.5 flex-none" />
           <span>
-            O casamento de “<b>{semantic.service.descricao}</b>” tem confiança
-            média. Confira se a nomenclatura corresponde ao serviço exigido.
+            O casamento de <b>{semantic.service.descricao}</b>
+            tem confiança média. Confirme se o nome corresponde ao serviço
+            exigido.
           </span>
         </div>
       )}
     </>
   );
 }
-
 function CriterionDetail({
   item,
   requirement,
@@ -524,11 +550,21 @@ function cellPresentation(source?: QualificationSource) {
       className: "border border-dashed border-gray-100 bg-white",
       label: "não possui",
     };
+  if (
+    (source.servicos ?? []).some(
+      (service) => service.conversionUnavailableReason,
+    )
+  )
+    return {
+      symbol: "!",
+      className: "border border-rose-200 bg-rose-100 text-rose-700",
+      label: "sem regra de conversao",
+    };
   if (source.selectionRole === "USED_WITH_APPROXIMATION")
     return {
       symbol: "~",
       className: "border border-amber-300 bg-amber-100 text-amber-800",
-      label: "usado com conversão aproximada",
+      label: "usado com conversao aproximada",
     };
   if (source.selectionRole === "MEETS_ALONE")
     return {

@@ -275,7 +275,7 @@ export default function AtestadosPage() {
       {totalPages > 1 && (
         <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-gray-500">
-            PÃ¡gina {page} de {totalPages}
+            Página {page} de {totalPages}
           </p>
           <div className="flex gap-2">
             <button
@@ -290,7 +290,7 @@ export default function AtestadosPage() {
               disabled={page >= totalPages}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50"
             >
-              PrÃ³xima
+              Próxima
             </button>
           </div>
         </div>
@@ -300,9 +300,9 @@ export default function AtestadosPage() {
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl p-6 shadow-xl w-full max-w-sm mx-4">
-            <h3 className="font-semibold text-gray-900 mb-2">Confirmar exclusÃ£o</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">Confirmar exclusão</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Tem certeza que deseja excluir este atestado? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
+              Tem certeza que deseja excluir este atestado? Esta ação não pode ser desfeita.
             </p>
             <div className="flex gap-3 justify-end">
               <button

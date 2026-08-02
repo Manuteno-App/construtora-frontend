@@ -6,7 +6,8 @@ export type ConversationRole = "USER" | "ASSISTANT";
 export type UnitFamilyStatus = "ACTIVE" | "INACTIVE";
 export type UnitStatus = "ACTIVE" | "INACTIVE";
 export type UnitOrigin = "SYSTEM" | "AI" | "USER";
-export type TechnicalConversionStatus = "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
+export type TechnicalConversionStatus =
+  "PENDING" | "APPROVED" | "REJECTED" | "INACTIVE";
 
 // ─── Entities ────────────────────────────────────────────────────────────────
 
@@ -211,12 +212,13 @@ export interface ServicoBuscado {
   unidadeComparada?: string;
   conversionKind?: "DIRECT" | "MATHEMATICAL" | "TECHNICAL";
   conversionFactor?: number;
+  conversionUnavailableReason?:
+    "SOURCE_UNIT_UNKNOWN" | "TARGET_UNIT_UNKNOWN" | "TECHNICAL_RULE_MISSING";
   itemCode?: string;
   pageNumber?: number;
   matchConfidence?: "HIGH" | "MEDIUM";
 }
 export type ServiceMatchType = "EXATA" | "POR_TERMOS" | "TEXTUAL_FORTE";
-
 
 export interface QualificationSource {
   atestadoId: string;
@@ -229,7 +231,11 @@ export interface QualificationSource {
   valor?: number;
   contratoNumero?: string;
   servicos?: ServicoBuscado[];
-  selectionRole?: "MEETS_ALONE" | "USED_IN_SUM" | "USED_WITH_APPROXIMATION" | "AVAILABLE_UNUSED";
+  selectionRole?:
+    | "MEETS_ALONE"
+    | "USED_IN_SUM"
+    | "USED_WITH_APPROXIMATION"
+    | "AVAILABLE_UNUSED";
   hasCaveat?: boolean;
 }
 
@@ -251,9 +257,7 @@ export interface ServiceRequirement {
 export type ProofMode = "ONE" | "MANY" | "MAX";
 
 export type QualificationFailureReason =
-  | "NO_MATCHES"
-  | "INSUFFICIENT_QUANTITY"
-  | "MAX_ATESTADOS_EXCEEDED";
+  "NO_MATCHES" | "INSUFFICIENT_QUANTITY" | "MAX_ATESTADOS_EXCEEDED";
 
 export interface ServiceCoverage {
   criterionKey?: string;
