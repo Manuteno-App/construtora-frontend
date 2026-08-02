@@ -25,7 +25,6 @@ const format = (value?: number) =>
     ? "—"
     : value.toLocaleString("pt-BR", { maximumFractionDigits: 4 });
 
-
 function coverageStatus(item: ServiceCoverage) {
   if (item.failureReason === "NO_MATCHES" || item.status === "NAO_ATENDIDO")
     return { label: "Não atendido", mark: "×", tone: "no" as const };
@@ -51,8 +50,7 @@ function hasCaveat(item: ServiceCoverage) {
 }
 
 function criterionMessage(item: ServiceCoverage) {
-  if (item.failureReason === "NO_MATCHES")
-    return "serviço inexistente na base";
+  if (item.failureReason === "NO_MATCHES") return "serviço inexistente na base";
   if (item.failureReason === "MAX_ATESTADOS_EXCEEDED")
     return `quantidade completa, bloqueada pelo limite de ${item.maxAtestados ?? "atestados"}`;
   if (item.failureReason === "INSUFFICIENT_QUANTITY")
@@ -85,7 +83,32 @@ function EvidenceCard({
 }) {
   const used = source.selectionRole !== "AVAILABLE_UNUSED";
   const approximate = source.selectionRole === "USED_WITH_APPROXIMATION";
-  const [reprocessedAt, setReprocessedAt] = useState(source.lastReprocessedAt); const [now] = useState(() => Date.now()); const reprocessMutation = useMutation({ mutationFn: () => api.post(String.fromCharCode(47,105,110,103,101,115,116,105,111,110,47) + source.atestadoId + String.fromCharCode(47,114,101,105,110,100,101,120)), onSuccess: () => setReprocessedAt(new Date().toISOString()) }); const canReprocess = !reprocessedAt || now - new Date(reprocessedAt).getTime() >= 24 * 60 * 60 * 1000;
+  const [reprocessedAt, setReprocessedAt] = useState(source.lastReprocessedAt);
+  const [now] = useState(() => Date.now());
+  const reprocessMutation = useMutation({
+    mutationFn: () =>
+      api.post(
+        String.fromCharCode(
+          47,
+          105,
+          110,
+          103,
+          101,
+          115,
+          116,
+          105,
+          111,
+          110,
+          47,
+        ) +
+          source.atestadoId +
+          String.fromCharCode(47, 114, 101, 105, 110, 100, 101, 120),
+      ),
+    onSuccess: () => setReprocessedAt(new Date().toISOString()),
+  });
+  const canReprocess =
+    !reprocessedAt ||
+    now - new Date(reprocessedAt).getTime() >= 24 * 60 * 60 * 1000;
   return (
     <article
       className={`overflow-hidden rounded-lg border bg-white ${used ? "border-gray-200" : "border-gray-100 opacity-60"}`}
@@ -99,9 +122,18 @@ function EvidenceCard({
             <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[11px] font-bold text-white">
               {source.filename}
             </span>
-              {canReprocess && <button onClick={() => reprocessMutation.mutate()} disabled={reprocessMutation.isPending}>↻</button>}
+            {canReprocess && (
+              <button
+                onClick={() => reprocessMutation.mutate()}
+                disabled={reprocessMutation.isPending}
+              >
+                ↻
+              </button>
+            )}
             <span className="min-w-0 flex-1 text-xs text-gray-500">
-              {source.local ? String.fromCharCode(32,183,32) + source.local : null}
+              {source.local
+                ? String.fromCharCode(32, 183, 32) + source.local
+                : null}
               {source.obraNome}
             </span>
           </div>
@@ -119,12 +151,15 @@ function EvidenceCard({
                 )}
               </span>
               <span className="font-semibold tabular-nums text-gray-800">
-                {format(service.quantidade)} {service.unidadeOriginal ?? service.unidade}
-                {service.conversionKind && service.conversionKind !== "DIRECT" && (
-                  <small className="block font-normal text-amber-700">
-                    = {format(service.quantidadeConvertida)} {service.unidadeComparada}
-                  </small>
-                )}
+                {format(service.quantidade)}{" "}
+                {service.unidadeOriginal ?? service.unidade}
+                {service.conversionKind &&
+                  service.conversionKind !== "DIRECT" && (
+                    <small className="block font-normal text-amber-700">
+                      = {format(service.quantidadeConvertida)}{" "}
+                      {service.unidadeComparada}
+                    </small>
+                  )}
               </span>
               <button
                 type="button"
@@ -156,11 +191,15 @@ function ExplicitSum({
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
       <span>Soma de {item.usedAtestadosCount ?? 0} atestado(s):</span>
-      <b className="tabular-nums">{format(total)} {requirement.unidade}</b>
+      <b className="tabular-nums">
+        {format(total)} {requirement.unidade}
+      </b>
       <b className={meetsQuantity ? "text-emerald-700" : "text-rose-700"}>
         {meetsQuantity ? "≥" : "<"}
       </b>
-      <b className="tabular-nums">{format(requirement.minQuantidade)} {requirement.unidade}</b>
+      <b className="tabular-nums">
+        {format(requirement.minQuantidade)} {requirement.unidade}
+      </b>
       <span
         className={`ml-auto font-bold ${item.failureReason === "MAX_ATESTADOS_EXCEEDED" ? "text-amber-700" : meetsQuantity ? "text-emerald-700" : "text-rose-700"}`}
       >
@@ -190,9 +229,10 @@ function Caveats({ item }: { item: ServiceCoverage }) {
         <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle size={15} className="mt-0.5 flex-none" />
           <span>
-            Conversão aproximada em <b>{conversion.source.filename}</b>: o documento registra
-            {" "}<b>{conversion.service.unidadeOriginal}</b> e o critério compara em
-            {" "}<b>{conversion.service.unidadeComparada}</b>. Confirme a premissa antes da habilitação.
+            Conversão aproximada em <b>{conversion.source.filename}</b>: o
+            documento registra <b>{conversion.service.unidadeOriginal}</b> e o
+            critério compara em <b>{conversion.service.unidadeComparada}</b>.
+            Confirme a premissa antes da habilitação.
           </span>
         </div>
       )}
@@ -200,8 +240,8 @@ function Caveats({ item }: { item: ServiceCoverage }) {
         <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle size={15} className="mt-0.5 flex-none" />
           <span>
-            O casamento de “<b>{semantic.service.descricao}</b>” tem confiança média.
-            Confira se a nomenclatura corresponde ao serviço exigido.
+            O casamento de “<b>{semantic.service.descricao}</b>” tem confiança
+            média. Confira se a nomenclatura corresponde ao serviço exigido.
           </span>
         </div>
       )}
@@ -224,20 +264,43 @@ function CriterionDetail({
   return (
     <section className="border-t border-gray-200 bg-gray-50 px-5 py-4">
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-        <span>Exigido: <b>{format(requirement?.minQuantidade)} {requirement?.unidade}</b></span>
-        <span>{item.matchingAtestadosCount ?? sources.length} atestado(s) possuem o serviço</span>
+        <span>
+          Exigido:{" "}
+          <b>
+            {format(requirement?.minQuantidade)} {requirement?.unidade}
+          </b>
+        </span>
+        <span>
+          {item.matchingAtestadosCount ?? sources.length} atestado(s) possuem o
+          serviço
+        </span>
       </div>
       {item.failureReason === "NO_MATCHES" ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-          <b className="text-sm text-rose-800">Nenhum atestado da base menciona este serviço.</b>
+          <b className="text-sm text-rose-800">
+            Nenhum atestado da base menciona este serviço.
+          </b>
           <p className="mt-1 text-xs text-rose-700">
-            Mudar a política não altera o resultado: não existe combinação possível.
+            Mudar a política não altera o resultado: não existe combinação
+            possível.
           </p>
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={() => window.location.assign("/upload")} className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => window.location.assign("/upload")}
+              className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-3 py-2 text-xs font-semibold text-white"
+            >
               <Upload size={14} /> Enviar atestado
             </button>
-            <button type="button" onClick={() => document.getElementById("criteria-editor")?.scrollIntoView({ behavior: "smooth" })} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("criteria-editor")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700"
+            >
               <FileSearch size={14} /> Revisar termo de busca
             </button>
           </div>
@@ -245,7 +308,11 @@ function CriterionDetail({
       ) : (
         <div className="space-y-2">
           {sources.map((source) => (
-            <EvidenceCard key={source.atestadoId} source={source} onOpen={onOpen} />
+            <EvidenceCard
+              key={source.atestadoId}
+              source={source}
+              onOpen={onOpen}
+            />
           ))}
         </div>
       )}
@@ -255,7 +322,9 @@ function CriterionDetail({
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <LockKeyhole size={15} />
           <span className="flex-1">
-            A quantidade foi encontrada, mas exige <b>{item.usedAtestadosCount}</b> atestados e o limite é <b>{item.maxAtestados}</b>.
+            A quantidade foi encontrada, mas exige{" "}
+            <b>{item.usedAtestadosCount}</b> atestados e o limite é{" "}
+            <b>{item.maxAtestados}</b>.
           </span>
           <button
             type="button"
@@ -284,11 +353,12 @@ function ConjunctionResult({
   onUseMany: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const candidates = result.bundleModeApplied === "ONE"
-    ? result.candidateAtestados ?? []
-    : result.selectedAtestados.length
-      ? result.selectedAtestados
-      : [];
+  const candidates =
+    result.bundleModeApplied === "ONE"
+      ? (result.candidateAtestados ?? [])
+      : result.selectedAtestados.length
+        ? result.selectedAtestados
+        : [];
   const noMatches = result.coverageByService.filter(
     (item) => coverageStatus(item).tone === "no",
   );
@@ -302,9 +372,16 @@ function ConjunctionResult({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-7 text-gray-800">
             {requirements.map((requirement, index) => (
-              <span key={requirement.criterionKey ?? `${requirement.query}-${index}`} className="contents">
+              <span
+                key={
+                  requirement.criterionKey ?? `${requirement.query}-${index}`
+                }
+                className="contents"
+              >
                 {index > 0 && <b className="text-orange-600">E</b>}
-                <b>{index + 1}. {requirement.query}</b>
+                <b>
+                  {index + 1}. {requirement.query}
+                </b>
               </span>
             ))}
           </span>
@@ -320,14 +397,19 @@ function ConjunctionResult({
                   : "Nenhum conjunto encontrado atende todos os critérios"}
           </span>
         </span>
-        <ChevronDown size={17} className={`mt-1 flex-none text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={17}
+          className={`mt-1 flex-none text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {open && (
         <div className="border-b border-gray-200 bg-gray-50 px-5 py-4">
           {noMatches.length > 0 && (
             <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
               <b>{noMatches.length} critério(s) não existem na base.</b>
-              <span className="block text-xs">Mudar a política não cria uma combinação possível.</span>
+              <span className="block text-xs">
+                Mudar a política não cria uma combinação possível.
+              </span>
             </div>
           )}
           {result.bundleModeApplied === "MAX" && candidates.length > 0 && (
@@ -337,27 +419,70 @@ function ConjunctionResult({
           )}
           <div className="space-y-3">
             {candidates.map((candidate) => (
-              <article key={candidate.atestadoId} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <article
+                key={candidate.atestadoId}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+              >
                 <header className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
-                  <b className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white">{candidate.filename}</b>
-                  <span className="min-w-0 flex-1 text-sm font-semibold text-gray-800">{candidate.obraNome}</span>
-                  {result.bundleModeApplied === "ONE" && <b className="text-xs text-emerald-700">{requirements.length} de {requirements.length}</b>}
+                  <b className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white">
+                    {candidate.filename}
+                  </b>
+                  <span className="min-w-0 flex-1 text-sm font-semibold text-gray-800">
+                    {candidate.obraNome}
+                  </span>
+                  {result.bundleModeApplied === "ONE" && (
+                    <b className="text-xs text-emerald-700">
+                      {requirements.length} de {requirements.length}
+                    </b>
+                  )}
                 </header>
                 {result.coverageByService.map((coverage, index) => {
-                  const source = (coverage.matchingAtestados ?? coverage.qualifyingAtestados)
-                    .find((item) => item.atestadoId === candidate.atestadoId);
+                  const source = (
+                    coverage.matchingAtestados ?? coverage.qualifyingAtestados
+                  ).find((item) => item.atestadoId === candidate.atestadoId);
                   const service = source?.servicos?.[0];
                   return (
-                    <div key={coverage.criterionKey ?? `${coverage.serviceQuery}-${index}`} className="grid gap-2 border-t border-gray-100 px-4 py-2.5 text-xs first:border-0 md:grid-cols-[24px_minmax(0,1fr)_auto_auto] md:items-center">
-                      <span className={`grid h-5 w-5 place-items-center rounded text-[10px] font-bold ${source ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{index + 1}</span>
-                      <span className="min-w-0">
-                        <b className="block truncate text-gray-800">{service ? `“${service.descricao}”` : coverage.serviceQuery}</b>
-                        <small className="text-gray-400">critério: {coverage.serviceQuery}</small>
+                    <div
+                      key={
+                        coverage.criterionKey ??
+                        `${coverage.serviceQuery}-${index}`
+                      }
+                      className="grid gap-2 border-t border-gray-100 px-4 py-2.5 text-xs first:border-0 md:grid-cols-[24px_minmax(0,1fr)_auto_auto] md:items-center"
+                    >
+                      <span
+                        className={`grid h-5 w-5 place-items-center rounded text-[10px] font-bold ${source ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
+                      >
+                        {index + 1}
                       </span>
-                      <b className="tabular-nums text-gray-700">{service ? `${format(service.quantidade)} ${service.unidadeOriginal ?? service.unidade}` : "não consta"}</b>
+                      <span className="min-w-0">
+                        <b className="block truncate text-gray-800">
+                          {service
+                            ? `“${service.descricao}”`
+                            : coverage.serviceQuery}
+                        </b>
+                        <small className="text-gray-400">
+                          critério: {coverage.serviceQuery}
+                        </small>
+                      </span>
+                      <b className="tabular-nums text-gray-700">
+                        {service
+                          ? `${format(service.quantidade)} ${service.unidadeOriginal ?? service.unidade}`
+                          : "não consta"}
+                      </b>
                       {source && (
-                        <button type="button" onClick={() => onOpen(source.atestadoId, service?.pageNumber)} className="text-orange-700 hover:underline">
-                          {service?.pageNumber ? `p. ${service.pageNumber}` : "PDF"} {service?.itemCode ? `· item ${service.itemCode}` : ""}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpen(source.atestadoId, service?.pageNumber)
+                          }
+                          className="text-orange-700 hover:underline"
+                        >
+                          {service?.pageNumber
+                            ? `p. ${service.pageNumber}`
+                            : "PDF"}{" "}
+                          {service?.itemCode
+                            ? `· item ${service.itemCode}`
+                            : ""}
                         </button>
                       )}
                     </div>
@@ -367,15 +492,25 @@ function ConjunctionResult({
             ))}
           </div>
           {result.exceededMaxAtestados && result.coverageByService[0] && (
-            <button type="button" onClick={() => onAllowLimit(result.coverageByService[0])} className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => onAllowLimit(result.coverageByService[0])}
+              className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white"
+            >
               Permitir {result.usedAtestadosCount} atestados
             </button>
           )}
-          {!result.fullyQualified && noMatches.length === 0 && result.bundleModeApplied === "ONE" && (
-            <button type="button" onClick={onUseMany} className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white">
-              Buscar em combinação de atestados
-            </button>
-          )}
+          {!result.fullyQualified &&
+            noMatches.length === 0 &&
+            result.bundleModeApplied === "ONE" && (
+              <button
+                type="button"
+                onClick={onUseMany}
+                className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-xs font-semibold text-white"
+              >
+                Buscar em combinação de atestados
+              </button>
+            )}
         </div>
       )}
     </>
@@ -383,14 +518,35 @@ function ConjunctionResult({
 }
 
 function cellPresentation(source?: QualificationSource) {
-  if (!source) return { symbol: "", className: "border border-dashed border-gray-100 bg-white", label: "não possui" };
+  if (!source)
+    return {
+      symbol: "",
+      className: "border border-dashed border-gray-100 bg-white",
+      label: "não possui",
+    };
   if (source.selectionRole === "USED_WITH_APPROXIMATION")
-    return { symbol: "~", className: "border border-amber-300 bg-amber-100 text-amber-800", label: "usado com conversão aproximada" };
+    return {
+      symbol: "~",
+      className: "border border-amber-300 bg-amber-100 text-amber-800",
+      label: "usado com conversão aproximada",
+    };
   if (source.selectionRole === "MEETS_ALONE")
-    return { symbol: "✓", className: "bg-emerald-600 text-white", label: "atende sozinho" };
+    return {
+      symbol: "✓",
+      className: "bg-emerald-600 text-white",
+      label: "atende sozinho",
+    };
   if (source.selectionRole === "USED_IN_SUM")
-    return { symbol: "✓", className: "border border-emerald-200 bg-emerald-100 text-emerald-700", label: "usado na soma" };
-  return { symbol: "·", className: "bg-gray-100 text-gray-400", label: "possui, não necessário" };
+    return {
+      symbol: "✓",
+      className: "border border-emerald-200 bg-emerald-100 text-emerald-700",
+      label: "usado na soma",
+    };
+  return {
+    symbol: "·",
+    className: "bg-gray-100 text-gray-400",
+    label: "possui, não necessário",
+  };
 }
 
 function CoverageMatrix({
@@ -409,32 +565,77 @@ function CoverageMatrix({
     <>
       <div className="overflow-x-auto border-b border-gray-200">
         <div style={{ minWidth: 340 + documents.length * 40 }}>
-          <div className="grid h-10 border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: template }}>
-            <div className="sticky left-0 z-20 flex items-center border-r border-gray-200 bg-gray-50 px-4 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Critério</div>
+          <div
+            className="grid h-10 border-b border-gray-200 bg-gray-50"
+            style={{ gridTemplateColumns: template }}
+          >
+            <div className="sticky left-0 z-20 flex items-center border-r border-gray-200 bg-gray-50 px-4 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Critério
+            </div>
             {documents.map((document, index) => (
-              <div key={document.atestadoId} title={`${document.filename} — ${document.obraNome}`} className="grid place-items-center border-l border-gray-100 text-[11px] font-bold text-gray-500">{index + 1}</div>
+              <div
+                key={document.atestadoId}
+                title={`${document.filename} — ${document.obraNome}`}
+                className="grid place-items-center border-l border-gray-100 text-[11px] font-bold text-gray-500"
+              >
+                {index + 1}
+              </div>
             ))}
           </div>
           {entries.map((item, index) => {
             const key = item.criterionKey ?? `${item.serviceQuery}-${index}`;
             const state = coverageStatus(item);
             return (
-              <div key={key} className={`grid h-14 border-b border-gray-100 last:border-0 ${expanded === key ? "bg-orange-50" : ""}`} style={{ gridTemplateColumns: template }}>
-                <button type="button" onClick={() => onExpand(key)} className={`sticky left-0 z-10 flex min-w-0 items-center gap-2 border-r border-l-4 bg-white px-3 text-left hover:bg-orange-50 ${borderTone(state.tone)} ${expanded === key ? "!bg-orange-50" : ""}`}>
-                  <span className={`grid h-6 w-6 flex-none place-items-center rounded text-[11px] font-bold ${badgeTone(state.tone)}`}>{index + 1}</span>
-                  <span className="min-w-0 flex-1">
-                    <b className="block truncate text-xs text-gray-800">{item.serviceQuery}</b>
-                    <small className="block truncate text-[11px] text-gray-400">{criterionMessage(item)}</small>
+              <div
+                key={key}
+                className={`grid h-14 border-b border-gray-100 last:border-0 ${expanded === key ? "bg-orange-50" : ""}`}
+                style={{ gridTemplateColumns: template }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onExpand(key)}
+                  className={`sticky left-0 z-10 flex min-w-0 items-center gap-2 border-r border-l-4 bg-white px-3 text-left hover:bg-orange-50 ${borderTone(state.tone)} ${expanded === key ? "!bg-orange-50" : ""}`}
+                >
+                  <span
+                    className={`grid h-6 w-6 flex-none place-items-center rounded text-[11px] font-bold ${badgeTone(state.tone)}`}
+                  >
+                    {index + 1}
                   </span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeTone(state.tone)}`}>{state.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <b className="block truncate text-xs text-gray-800">
+                      {item.serviceQuery}
+                    </b>
+                    <small className="block truncate text-[11px] text-gray-400">
+                      {criterionMessage(item)}
+                    </small>
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeTone(state.tone)}`}
+                  >
+                    {state.label}
+                  </span>
                 </button>
                 {documents.map((document) => {
-                  const source = (item.matchingAtestados ?? item.qualifyingAtestados).find((candidate) => candidate.atestadoId === document.atestadoId);
+                  const source = (
+                    item.matchingAtestados ?? item.qualifyingAtestados
+                  ).find(
+                    (candidate) => candidate.atestadoId === document.atestadoId,
+                  );
                   const cell = cellPresentation(source);
                   const service = source?.servicos?.[0];
                   return (
-                    <button key={document.atestadoId} type="button" onClick={() => onExpand(key)} title={`${document.filename}: ${service ? `“${service.descricao}” · ${format(service.quantidade)} ${service.unidadeOriginal ?? service.unidade} (${cell.label})` : cell.label}`} className="grid place-items-center border-l border-gray-100">
-                      <span className={`grid h-7 w-7 place-items-center rounded-md text-xs font-bold ${cell.className}`}>{cell.symbol}</span>
+                    <button
+                      key={document.atestadoId}
+                      type="button"
+                      onClick={() => onExpand(key)}
+                      title={`${document.filename}: ${service ? `“${service.descricao}” · ${format(service.quantidade)} ${service.unidadeOriginal ?? service.unidade} (${cell.label})` : cell.label}`}
+                      className="grid place-items-center border-l border-gray-100"
+                    >
+                      <span
+                        className={`grid h-7 w-7 place-items-center rounded-md text-xs font-bold ${cell.className}`}
+                      >
+                        {cell.symbol}
+                      </span>
                     </button>
                   );
                 })}
@@ -444,10 +645,30 @@ function CoverageMatrix({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 px-5 py-2 text-[11px] text-gray-500">
-        <span><i className="mr-1 inline-grid h-5 w-5 place-items-center rounded bg-emerald-600 not-italic text-white">✓</i> atende sozinho</span>
-        <span><i className="mr-1 inline-grid h-5 w-5 place-items-center rounded border border-emerald-200 bg-emerald-100 not-italic text-emerald-700">✓</i> usado na soma</span>
-        <span><i className="mr-1 inline-grid h-5 w-5 place-items-center rounded border border-amber-300 bg-amber-100 not-italic text-amber-800">~</i> conversão aproximada</span>
-        <span><i className="mr-1 inline-grid h-5 w-5 place-items-center rounded bg-gray-100 not-italic text-gray-400">·</i> possui, não necessário</span>
+        <span>
+          <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded bg-emerald-600 not-italic text-white">
+            ✓
+          </i>{" "}
+          atende sozinho
+        </span>
+        <span>
+          <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded border border-emerald-200 bg-emerald-100 not-italic text-emerald-700">
+            ✓
+          </i>{" "}
+          usado na soma
+        </span>
+        <span>
+          <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded border border-amber-300 bg-amber-100 not-italic text-amber-800">
+            ~
+          </i>{" "}
+          conversão aproximada
+        </span>
+        <span>
+          <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded bg-gray-100 not-italic text-gray-400">
+            ·
+          </i>{" "}
+          possui, não necessário
+        </span>
       </div>
     </>
   );
@@ -469,72 +690,139 @@ export function QualificationResult({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showCriteria, setShowCriteria] = useState(false);
   const [filter, setFilter] = useState<"all" | Tone>("all");
-  const stats = useMemo(() => result.coverageByService.reduce((acc, item) => {
-    acc[coverageStatus(item).tone]++;
-    return acc;
-  }, { ok: 0, partial: 0, no: 0 }), [result]);
-  const entries = result.coverageByService.filter((item) => filter === "all" || coverageStatus(item).tone === filter);
+  const stats = useMemo(
+    () =>
+      result.coverageByService.reduce(
+        (acc, item) => {
+          acc[coverageStatus(item).tone]++;
+          return acc;
+        },
+        { ok: 0, partial: 0, no: 0 },
+      ),
+    [result],
+  );
+  const entries = result.coverageByService.filter(
+    (item) => filter === "all" || coverageStatus(item).tone === filter,
+  );
   const documents = useMemo(() => {
-    const sources = result.coverageByService.flatMap((item) => item.matchingAtestados ?? item.qualifyingAtestados);
-    return Array.from(new Map(sources.map((source) => [source.atestadoId, source])).values()).slice(0, 12);
+    const sources = result.coverageByService.flatMap(
+      (item) => item.matchingAtestados ?? item.qualifyingAtestados,
+    );
+    return Array.from(
+      new Map(sources.map((source) => [source.atestadoId, source])).values(),
+    );
   }, [result]);
-  const overallTone: Tone = result.fullyQualified ? "ok" : stats.no > 0 ? "no" : "partial";
-  const headline = result.bundleModeApplied === "MANY"
-    ? stats.ok === result.coverageByService.length
-      ? "Todos os critérios atendidos"
-      : `${stats.ok} de ${result.coverageByService.length} critérios atendidos`
-    : result.bundleModeApplied === "ONE"
-      ? result.conjunctionCandidateCount
-        ? `${result.conjunctionCandidateCount} atestado(s) atendem todos os critérios sozinhos`
-        : stats.no > 0 ? "Não atende" : `Nenhum atestado atende os ${result.coverageByService.length} sozinho`
-      : result.fullyQualified
-        ? `Conjunto de ${result.usedAtestadosCount} atestado(s) atende tudo`
-        : result.exceededMaxAtestados
-          ? "Quantidade completa, bloqueada pela regra"
-          : "Nenhum conjunto atende todos os critérios";
-  const subtitle = result.bundleModeApplied === "MANY"
-    ? "Cada critério resolve com seus próprios atestados."
+  const overallTone: Tone = result.fullyQualified
+    ? "ok"
     : stats.no > 0
-      ? `${stats.no} critério(s) não existem na base — nenhuma combinação resolve.`
+      ? "no"
+      : "partial";
+  const headline =
+    result.bundleModeApplied === "MANY"
+      ? stats.ok === result.coverageByService.length
+        ? "Todos os critérios atendidos"
+        : `${stats.ok} de ${result.coverageByService.length} critérios atendidos`
       : result.bundleModeApplied === "ONE"
-        ? `O melhor candidato atende ${result.bestCandidateCoverageCount ?? 0} de ${result.coverageByService.length} critérios.`
-        : `O mesmo conjunto deve respeitar o limite global de ${result.maxAtestados} atestados.`;
+        ? result.conjunctionCandidateCount
+          ? `${result.conjunctionCandidateCount} atestado(s) atendem todos os critérios sozinhos`
+          : stats.no > 0
+            ? "Não atende"
+            : `Nenhum atestado atende os ${result.coverageByService.length} sozinho`
+        : result.fullyQualified
+          ? `Conjunto de ${result.usedAtestadosCount} atestado(s) atende tudo`
+          : result.exceededMaxAtestados
+            ? "Quantidade completa, bloqueada pela regra"
+            : "Nenhum conjunto atende todos os critérios";
+  const subtitle =
+    result.bundleModeApplied === "MANY"
+      ? "Cada critério resolve com seus próprios atestados."
+      : stats.no > 0
+        ? `${stats.no} critério(s) não existem na base — nenhuma combinação resolve.`
+        : result.bundleModeApplied === "ONE"
+          ? `O melhor candidato atende ${result.bestCandidateCoverageCount ?? 0} de ${result.coverageByService.length} critérios.`
+          : `O mesmo conjunto deve respeitar o limite global de ${result.maxAtestados} atestados.`;
 
-  const toggleExpanded = (key: string) => setExpanded((current) => current === key ? null : key);
-  const expandedItem = entries.find((item, index) => (item.criterionKey ?? `${item.serviceQuery}-${index}`) === expanded);
-  const expandedRequirement = (expandedItem && requirements.find((requirement) => requirement.criterionKey === expandedItem.criterionKey))
-    ?? (expandedItem ? requirements.find((requirement) => requirement.query === expandedItem.serviceQuery) : undefined);
+  const toggleExpanded = (key: string) =>
+    setExpanded((current) => (current === key ? null : key));
+  const expandedItem = entries.find(
+    (item, index) =>
+      (item.criterionKey ?? `${item.serviceQuery}-${index}`) === expanded,
+  );
+  const expandedRequirement =
+    (expandedItem &&
+      requirements.find(
+        (requirement) => requirement.criterionKey === expandedItem.criterionKey,
+      )) ??
+    (expandedItem
+      ? requirements.find(
+          (requirement) => requirement.query === expandedItem.serviceQuery,
+        )
+      : undefined);
 
   return (
     <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
       <header className="flex flex-wrap items-center gap-3 border-b border-gray-200 px-5 py-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-          Resultado — {result.bundleModeApplied === "MANY" ? "cada critério com seus próprios atestados" : "todos os critérios no mesmo conjunto"}
+          Resultado —{" "}
+          {result.bundleModeApplied === "MANY"
+            ? "cada critério com seus próprios atestados"
+            : "todos os critérios no mesmo conjunto"}
         </h2>
         <span className="ml-auto text-xs text-gray-400">
-          {result.totalAtestadosBase != null ? `${format(result.totalAtestadosBase)} na base · ` : ""}
+          {result.totalAtestadosBase != null
+            ? `${format(result.totalAtestadosBase)} na base · `
+            : ""}
           {result.matchingAtestadosCount ?? documents.length} com algum serviço
-          {result.elapsedMs != null ? ` · ${(result.elapsedMs / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s` : ""}
+          {result.elapsedMs != null
+            ? ` · ${(result.elapsedMs / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`
+            : ""}
         </span>
       </header>
       <div className="border-b border-gray-200 px-5 py-4">
         <div className="flex flex-wrap items-start gap-3">
-          <span className={`grid h-8 w-8 place-items-center rounded-lg font-bold ${badgeTone(overallTone)}`}>
+          <span
+            className={`grid h-8 w-8 place-items-center rounded-lg font-bold ${badgeTone(overallTone)}`}
+          >
             {overallTone === "ok" ? "✓" : overallTone === "partial" ? "!" : "×"}
           </span>
           <div className="min-w-0 flex-1">
             <h3 className="text-lg font-bold text-gray-900">{headline}</h3>
             <p className="text-sm text-gray-500">{subtitle}</p>
           </div>
-          <button type="button" onClick={() => setShowCriteria((value) => !value)} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">
+          <button
+            type="button"
+            onClick={() => setShowCriteria((value) => !value)}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
             <span className="mr-2 text-[10px]">{showCriteria ? "⌄" : "▸"}</span>
             {showCriteria ? "ocultar" : "ver"} critério a critério
           </button>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {([ ["ok", "atendidos", stats.ok], ["partial", "parcialmente atendidos", stats.partial], ["no", "não atendidos", stats.no] ] as const).map(([kind, label, count]) => (
-            <button key={kind} type="button" onClick={() => setFilter(filter === kind ? "all" : kind)} className={`rounded-xl border px-3 py-2 text-left ${filter === kind ? "border-orange-400 ring-2 ring-orange-100" : "border-gray-200"}`}>
-              <b className={kind === "ok" ? "text-emerald-700" : kind === "partial" ? "text-amber-700" : "text-rose-700"}>{count}</b>
+          {(
+            [
+              ["ok", "atendidos", stats.ok],
+              ["partial", "parcialmente atendidos", stats.partial],
+              ["no", "não atendidos", stats.no],
+            ] as const
+          ).map(([kind, label, count]) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => setFilter(filter === kind ? "all" : kind)}
+              className={`rounded-xl border px-3 py-2 text-left ${filter === kind ? "border-orange-400 ring-2 ring-orange-100" : "border-gray-200"}`}
+            >
+              <b
+                className={
+                  kind === "ok"
+                    ? "text-emerald-700"
+                    : kind === "partial"
+                      ? "text-amber-700"
+                      : "text-rose-700"
+                }
+              >
+                {count}
+              </b>
               <span className="ml-2 text-xs text-gray-500">{label}</span>
             </button>
           ))}
@@ -545,11 +833,31 @@ export function QualificationResult({
               const state = coverageStatus(item);
               const key = item.criterionKey ?? `${item.serviceQuery}-${index}`;
               return (
-                <button key={key} type="button" onClick={() => { setExpanded(key); if (result.bundleModeApplied === "MANY") setFilter("all"); }} className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-gray-50">
-                  <span className={`grid h-5 w-5 place-items-center rounded text-[11px] font-bold ${badgeTone(state.tone)}`}>{index + 1}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{item.serviceQuery}</span>
-                  {hasCaveat(item) && state.tone === "ok" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">com ressalva</span>}
-                  <span className="text-xs text-gray-400">{state.label} · {criterionMessage(item)}</span>
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setExpanded(key);
+                    if (result.bundleModeApplied === "MANY") setFilter("all");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-gray-50"
+                >
+                  <span
+                    className={`grid h-5 w-5 place-items-center rounded text-[11px] font-bold ${badgeTone(state.tone)}`}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-800">
+                    {item.serviceQuery}
+                  </span>
+                  {hasCaveat(item) && state.tone === "ok" && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                      com ressalva
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-400">
+                    {state.label} · {criterionMessage(item)}
+                  </span>
                 </button>
               );
             })}
@@ -558,15 +866,33 @@ export function QualificationResult({
       </div>
       {result.bundleModeApplied === "MANY" ? (
         <>
-          <CoverageMatrix entries={entries} documents={documents} expanded={expanded} onExpand={toggleExpanded} />
+          <CoverageMatrix
+            entries={entries}
+            documents={documents}
+            expanded={expanded}
+            onExpand={toggleExpanded}
+          />
           {expandedItem ? (
-            <CriterionDetail item={expandedItem} requirement={expandedRequirement} onOpen={onOpen} onAllowLimit={onAllowLimit} />
+            <CriterionDetail
+              item={expandedItem}
+              requirement={expandedRequirement}
+              onOpen={onOpen}
+              onAllowLimit={onAllowLimit}
+            />
           ) : (
-            <p className="px-5 py-3 text-xs text-gray-400">Clique em uma linha para ver textos, quantidades e páginas.</p>
+            <p className="px-5 py-3 text-xs text-gray-400">
+              Clique em uma linha para ver textos, quantidades e páginas.
+            </p>
           )}
         </>
       ) : (
-        <ConjunctionResult result={result} requirements={requirements} onOpen={onOpen} onAllowLimit={onAllowLimit} onUseMany={onUseMany} />
+        <ConjunctionResult
+          result={result}
+          requirements={requirements}
+          onOpen={onOpen}
+          onAllowLimit={onAllowLimit}
+          onUseMany={onUseMany}
+        />
       )}
     </section>
   );
