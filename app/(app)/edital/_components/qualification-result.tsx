@@ -14,8 +14,10 @@ import {
   LockKeyhole,
   Upload,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 
+import { useMemo, useState } from "react";
 type Tone = "ok" | "partial" | "no";
 
 const format = (value?: number) =>
@@ -83,6 +85,7 @@ function EvidenceCard({
 }) {
   const used = source.selectionRole !== "AVAILABLE_UNUSED";
   const approximate = source.selectionRole === "USED_WITH_APPROXIMATION";
+  const [reprocessedAt, setReprocessedAt] = useState(source.lastReprocessedAt); const [now] = useState(() => Date.now()); const reprocessMutation = useMutation({ mutationFn: () => api.post(String.fromCharCode(47,105,110,103,101,115,116,105,111,110,47) + source.atestadoId + String.fromCharCode(47,114,101,105,110,100,101,120)), onSuccess: () => setReprocessedAt(new Date().toISOString()) }); const canReprocess = !reprocessedAt || now - new Date(reprocessedAt).getTime() >= 24 * 60 * 60 * 1000;
   return (
     <article
       className={`overflow-hidden rounded-lg border bg-white ${used ? "border-gray-200" : "border-gray-100 opacity-60"}`}
@@ -96,9 +99,10 @@ function EvidenceCard({
             <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[11px] font-bold text-white">
               {source.filename}
             </span>
+              {canReprocess && <button onClick={() => reprocessMutation.mutate()} disabled={reprocessMutation.isPending}>↻</button>}
             <span className="min-w-0 flex-1 text-xs text-gray-500">
+              {source.local ? String.fromCharCode(32,183,32) + source.local : null}
               {source.obraNome}
-              {source.local ? ` · ${source.local}` : ""}
             </span>
           </div>
           {(source.servicos ?? []).map((service, index) => (

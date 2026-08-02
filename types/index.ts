@@ -220,6 +220,7 @@ export type ServiceMatchType = "EXATA" | "POR_TERMOS" | "TEXTUAL_FORTE";
 
 export interface QualificationSource {
   atestadoId: string;
+  lastReprocessedAt?: string;
   filename: string;
   obraNome: string;
   local?: string;
