@@ -223,6 +223,7 @@ export default function EditalPage() {
         .post("/qualification/evaluate-bundle", submitted!)
         .then((r) => r.data),
     enabled: submitted !== null,
+    refetchOnWindowFocus: false,
   });
   const busy = isLoading || isFetching;
   const update = (
