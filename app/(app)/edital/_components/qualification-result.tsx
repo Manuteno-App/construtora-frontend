@@ -37,8 +37,14 @@ function coverageStatus(item: ServiceCoverage) {
   };
 }
 
+function sourcesUsedForQualification(item: ServiceCoverage) {
+  return item.selectedAtestados?.length
+    ? item.selectedAtestados
+    : item.qualifyingAtestados ?? item.matchingAtestados;
+}
+
 function hasCaveat(item: ServiceCoverage) {
-  return (item.matchingAtestados ?? item.qualifyingAtestados).some(
+  return sourcesUsedForQualification(item).some(
     (source) =>
       source.hasCaveat ||
       (source.servicos ?? []).some(
@@ -119,9 +125,14 @@ function EvidenceCard({
         />
         <div className="min-w-0 flex-1 px-3 py-2.5">
           <div className="flex flex-wrap items-start gap-2">
-            <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[11px] font-bold text-white">
+            <button
+              type="button"
+              onClick={() => onOpen(source.atestadoId)}
+              className="rounded-md bg-gray-900 px-2 py-0.5 text-left text-[11px] font-bold text-white hover:bg-gray-700 hover:underline"
+              title="Abrir PDF do atestado"
+            >
               {source.filename}
-            </span>
+            </button>
             {canReprocess && (
               <button
                 onClick={() => reprocessMutation.mutate()}
@@ -222,7 +233,7 @@ function ExplicitSum({
 }
 
 function Caveats({ item }: { item: ServiceCoverage }) {
-  const services = (item.matchingAtestados ?? item.qualifyingAtestados).flatMap(
+  const services = sourcesUsedForQualification(item).flatMap(
     (source) => (source.servicos ?? []).map((service) => ({ source, service })),
   );
   const conversion = services.find(

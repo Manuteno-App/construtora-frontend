@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { AtestadoListResponse, AtestadoStatus } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpDown, Eye, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, FileText, RefreshCw, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -29,6 +29,7 @@ export default function AtestadosPage() {
   const [activeStatus, setActiveStatus] = useState<AtestadoStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<"createdAt" | "lastReprocessedAt">("lastReprocessedAt");
+  const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const query = {
@@ -36,6 +37,7 @@ export default function AtestadosPage() {
     limit: PAGE_SIZE,
     sortBy,
     ...(activeStatus !== "ALL" && { status: activeStatus }),
+    ...(search.trim() && { search: search.trim() }),
   };
 
   const { data, isLoading } = useQuery<AtestadoListResponse>({
@@ -102,6 +104,20 @@ export default function AtestadosPage() {
         >
           + Enviar atestado
         </Link>
+      </div>
+
+      <div className="relative mb-4 max-w-xl">
+        <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Buscar por obra, contrato ou arquivo"
+          className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-3 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+        />
       </div>
 
       {/* Sort + Status tabs */}
