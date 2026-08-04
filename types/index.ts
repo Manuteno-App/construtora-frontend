@@ -32,6 +32,12 @@ export interface Obra {
   dataFim?: string;
   valor?: number;
   art?: string;
+  numeroAtestado?: string;
+  extensaoDeclaradaKm?: number;
+  kmInicial?: number;
+  kmFinal?: number;
+  extensaoCalculadaKm?: number;
+  extensaoKm?: number;
   contratos?: Contrato[];
   servicosExecutados?: ServicoExecutado[];
 }
@@ -199,6 +205,7 @@ export interface QualificationFilters {
   dataFim?: string;
   localidade?: string;
   minValor?: number;
+  minExtensaoKm?: number;
 }
 
 export interface ServicoBuscado {
@@ -230,6 +237,14 @@ export interface QualificationSource {
   dataFim?: string;
   valor?: number;
   contratoNumero?: string;
+  numeroAtestado?: string;
+  numeroPrincipal?: string;
+  numeroPrincipalOrigem?: "ATESTADO" | "CONTRATO";
+  extensaoKm?: number;
+  extensaoDeclaradaKm?: number;
+  kmInicial?: number;
+  kmFinal?: number;
+  extensaoCalculadaKm?: number;
   servicos?: ServicoBuscado[];
   selectionRole?:
     | "MEETS_ALONE"

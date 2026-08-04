@@ -213,6 +213,7 @@ export default function EditalPage() {
   const [municipio, setMunicipio] = useState("");
   const [periodo, setPeriodo] = useState("");
   const [minValor, setMinValor] = useState("");
+  const [minExtensaoKm, setMinExtensaoKm] = useState("");
   const [submitted, setSubmitted] = useState<BundleEvaluationRequest | null>(
     null,
   );
@@ -265,6 +266,7 @@ export default function EditalPage() {
         ? { dataInicio: `${date[1]}-01-01`, dataFim: `${date[2]}-12-31` }
         : {}),
       ...(minValor ? { minValor: Number(minValor) } : {}),
+      ...(minExtensaoKm ? { minExtensaoKm: parseDecimal(minExtensaoKm) } : {}),
     };
     const services: ServiceRequirement[] = valid.map((item) => ({
       criterionKey: String(item.id),
@@ -348,7 +350,7 @@ export default function EditalPage() {
           <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
             Filtros da pesquisa
           </p>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-5">
             <label className="text-xs text-gray-600">
               Estado
               <select
@@ -388,6 +390,18 @@ export default function EditalPage() {
                 min="0"
                 onChange={(e) => setMinValor(e.target.value)}
                 placeholder="Ex: 500.000"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-xs text-gray-600">
+              Extensão mínima da obra (km)
+              <input
+                value={minExtensaoKm}
+                type="number"
+                min="0"
+                step="0.001"
+                onChange={(e) => setMinExtensaoKm(e.target.value)}
+                placeholder="Ex: 12,5"
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </label>

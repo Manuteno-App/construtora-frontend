@@ -273,6 +273,23 @@ export default function AtestadoDetailPage() {
                     ART: {obra.art}
                   </div>
                 )}
+                {(obra.numeroAtestado || obra.contratos?.some((contrato) => contrato.numero)) && (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Hash size={13} className="text-gray-400" />
+                    {obra.numeroAtestado ? <>Atestado: {obra.numeroAtestado}</> : <>Contrato: {obra.contratos?.find((contrato) => contrato.numero)?.numero}</>}
+                  </div>
+                )}
+                {obra.extensaoKm != null && (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <span className="text-gray-400">↔</span>
+                    Extensão: {formatNumber(obra.extensaoKm)} km
+                    {obra.extensaoDeclaradaKm != null && obra.extensaoCalculadaKm != null && obra.kmInicial != null && obra.kmFinal != null && (
+                      <span className="text-xs text-gray-400">
+                        (declarada: {formatNumber(obra.extensaoDeclaradaKm)} km; trecho: KM {formatNumber(obra.kmInicial)} ao KM {formatNumber(obra.kmFinal)})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {obra.contratos && obra.contratos.length > 0 && (

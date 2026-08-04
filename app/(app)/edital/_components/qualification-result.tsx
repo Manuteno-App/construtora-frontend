@@ -44,6 +44,8 @@ function sourcesUsedForQualification(item: ServiceCoverage) {
 }
 
 function hasCaveat(item: ServiceCoverage) {
+  if (item.selectedAtestados?.length === 1) return false;
+
   return sourcesUsedForQualification(item).some(
     (source) =>
       source.hasCaveat ||
@@ -146,6 +148,14 @@ function EvidenceCard({
                 ? String.fromCharCode(32, 183, 32) + source.local
                 : null}
               {source.obraNome}
+              {source.numeroPrincipal && (
+                <small className="ml-2">
+                  · {source.numeroPrincipalOrigem === "ATESTADO" ? "Atestado" : "Contrato"}: {source.numeroPrincipal}
+                </small>
+              )}
+              {source.extensaoKm != null && (
+                <small className="ml-2">· Extensão: {format(source.extensaoKm)} km</small>
+              )}
             </span>
           </div>
           {(source.servicos ?? []).map((service, index) => (
