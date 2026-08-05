@@ -8,6 +8,7 @@ import type {
   ServiceRequirement,
 } from "@/types";
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   AlertTriangle,
   ChevronDown,
@@ -127,14 +128,13 @@ function EvidenceCard({
         />
         <div className="min-w-0 flex-1 px-3 py-2.5">
           <div className="flex flex-wrap items-start gap-2">
-            <button
-              type="button"
-              onClick={() => onOpen(source.atestadoId)}
-              className="rounded-md bg-gray-900 px-2 py-0.5 text-left text-[11px] font-bold text-white hover:bg-gray-700 hover:underline"
-              title="Abrir PDF do atestado"
+            <Link
+              href={"/atestados/" + source.atestadoId}
+              className="rounded-md bg-gray-900 px-2 py-0.5 text-[11px] font-bold text-white hover:bg-gray-700 hover:underline"
+              title="Abrir detalhes do atestado"
             >
               {source.filename}
-            </button>
+            </Link>
             {canReprocess && (
               <button
                 onClick={() => reprocessMutation.mutate()}
@@ -471,9 +471,13 @@ function ConjunctionResult({
                 className="overflow-hidden rounded-xl border border-gray-200 bg-white"
               >
                 <header className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
-                  <b className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white">
+                  <Link
+                    href={"/atestados/" + candidate.atestadoId}
+                    className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white hover:bg-gray-700 hover:underline"
+                    title="Abrir detalhes do atestado"
+                  >
                     {candidate.filename}
-                  </b>
+                  </Link>
                   <span className="min-w-0 flex-1 text-sm font-semibold text-gray-800">
                     {candidate.obraNome}
                   </span>
