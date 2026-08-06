@@ -41,7 +41,7 @@ function coverageStatus(item: ServiceCoverage) {
 function sourcesUsedForQualification(item: ServiceCoverage) {
   return item.selectedAtestados?.length
     ? item.selectedAtestados
-    : item.qualifyingAtestados ?? item.matchingAtestados;
+    : (item.qualifyingAtestados ?? item.matchingAtestados);
 }
 
 function hasCaveat(item: ServiceCoverage) {
@@ -150,11 +150,17 @@ function EvidenceCard({
               {source.obraNome}
               {source.numeroPrincipal && (
                 <small className="ml-2">
-                  · {source.numeroPrincipalOrigem === "ATESTADO" ? "Atestado" : "Contrato"}: {source.numeroPrincipal}
+                  ·{" "}
+                  {source.numeroPrincipalOrigem === "ATESTADO"
+                    ? "Atestado"
+                    : "Contrato"}
+                  : {source.numeroPrincipal}
                 </small>
               )}
               {source.extensaoKm != null && (
-                <small className="ml-2">· Extensão: {format(source.extensaoKm)} km</small>
+                <small className="ml-2">
+                  · Extensão: {format(source.extensaoKm)} km
+                </small>
               )}
             </span>
           </div>
@@ -243,8 +249,8 @@ function ExplicitSum({
 }
 
 function Caveats({ item }: { item: ServiceCoverage }) {
-  const services = sourcesUsedForQualification(item).flatMap(
-    (source) => (source.servicos ?? []).map((service) => ({ source, service })),
+  const services = sourcesUsedForQualification(item).flatMap((source) =>
+    (source.servicos ?? []).map((service) => ({ source, service })),
   );
   const conversion = services.find(
     ({ service }) => service.conversionKind === "TECHNICAL",
@@ -307,7 +313,11 @@ function CriterionDetail({
   onOpen: (id: string, pageNumber?: number) => void;
   onAllowLimit: (item: ServiceCoverage) => void;
 }) {
-  const sources = item.matchingAtestados ?? item.qualifyingAtestados;
+  const matchingSources = item.matchingAtestados ?? item.qualifyingAtestados;
+  const sources =
+    item.proofModeApplied === "ONE" && item.quantidadeExigida !== undefined
+      ? item.qualifyingAtestados
+      : matchingSources;
   return (
     <section className="border-t border-gray-200 bg-gray-50 px-5 py-4">
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
