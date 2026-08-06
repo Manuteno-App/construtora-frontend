@@ -8,7 +8,6 @@ import type {
   ServiceRequirement,
 } from "@/types";
 import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
 import {
   AlertTriangle,
   ChevronDown,
@@ -17,6 +16,7 @@ import {
   LockKeyhole,
   Upload,
 } from "lucide-react";
+import Link from "next/link";
 
 import { useMemo, useState } from "react";
 type Tone = "ok" | "partial" | "no";
@@ -258,9 +258,6 @@ function Caveats({ item }: { item: ServiceCoverage }) {
   const unavailableConversion = services.find(
     ({ service }) => service.conversionUnavailableReason,
   );
-  const semantic = services.find(
-    ({ service }) => service.matchConfidence === "MEDIUM",
-  );
   return (
     <>
       {conversion && (
@@ -286,16 +283,6 @@ function Caveats({ item }: { item: ServiceCoverage }) {
             to <b>{unavailableConversion.service.unidadeComparada}</b>. This
             document is displayed but is not included in the calculation until a
             rule is created or approved.
-          </span>
-        </div>
-      )}
-      {semantic && (
-        <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          <AlertTriangle size={15} className="mt-0.5 flex-none" />
-          <span>
-            O casamento de <b>{semantic.service.descricao}</b>
-            tem confiança média. Confirme se o nome corresponde ao serviço
-            exigido.
           </span>
         </div>
       )}
