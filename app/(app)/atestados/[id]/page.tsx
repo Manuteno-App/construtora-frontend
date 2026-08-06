@@ -162,6 +162,11 @@ export default function AtestadoDetailPage() {
               </h1>
               <div className="flex items-center gap-3 mt-1">
                 {atestado && <StatusBadge status={atestado.status} />}
+                {atestado?.categoria && (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                    {atestado.categoria}
+                  </span>
+                )}
                 {atestado?.createdAt && (
                   <span className="text-xs text-gray-400">
                     Enviado em {formatDate(atestado.createdAt)}

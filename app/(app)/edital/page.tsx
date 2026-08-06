@@ -76,6 +76,11 @@ const parseDecimal = (value: string) => {
   return Number(normalized);
 };
 
+const normalizeSearchUnits = (value: string) =>
+  value.replace(/\bm([23])\b/gi, (_, exponent: string) =>
+    exponent === "2" ? "m\u00B2" : "m\u00B3",
+  );
+
 function ServiceAutocomplete({
   value,
   onChange,
@@ -109,7 +114,7 @@ function ServiceAutocomplete({
         value={value}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
-          onChange(e.target.value);
+          onChange(normalizeSearchUnits(e.target.value));
           setOpen(true);
         }}
         placeholder="Serviço ou material executado"
@@ -171,7 +176,7 @@ function UnitAutocomplete({
         value={value}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
-          onChange(e.target.value);
+          onChange(normalizeSearchUnits(e.target.value));
           setOpen(true);
         }}
         placeholder="Unidade"
@@ -213,7 +218,8 @@ export default function EditalPage() {
   const [municipio, setMunicipio] = useState("");
   const [periodo, setPeriodo] = useState("");
   const [minValor, setMinValor] = useState("");
-  const [minExtensaoKm, setMinExtensaoKm] = useState("");
+  const [extensaoKm, setExtensaoKm] = useState("");
+  const [categoriaAtestado, setCategoriaAtestado] = useState("");
   const [submitted, setSubmitted] = useState<BundleEvaluationRequest | null>(
     null,
   );
@@ -266,11 +272,12 @@ export default function EditalPage() {
         ? { dataInicio: `${date[1]}-01-01`, dataFim: `${date[2]}-12-31` }
         : {}),
       ...(minValor ? { minValor: Number(minValor) } : {}),
-      ...(minExtensaoKm ? { minExtensaoKm: parseDecimal(minExtensaoKm) } : {}),
+      ...(extensaoKm ? { extensaoKm: parseDecimal(extensaoKm) } : {}),
+      ...(categoriaAtestado ? { categoriaAtestado: categoriaAtestado as "ST" | "CIV" | "SAN" | "INS" } : {}),
     };
     const services: ServiceRequirement[] = valid.map((item) => ({
       criterionKey: String(item.id),
-      query: item.query.trim(),
+      query: normalizeSearchUnits(item.query).trim(),
       ...(item.minQuantidade
         ? { minQuantidade: parseDecimal(item.minQuantidade) }
         : {}),
@@ -394,19 +401,28 @@ export default function EditalPage() {
               />
             </label>
             <label className="text-xs text-gray-600">
-              Extensão mínima da obra (km)
+              Extensão da obra (km)
               <input
-                value={minExtensaoKm}
+                value={extensaoKm}
                 type="number"
                 min="0"
                 step="0.001"
-                onChange={(e) => setMinExtensaoKm(e.target.value)}
+                onChange={(e) => setExtensaoKm(e.target.value)}
                 placeholder="Ex: 12,5"
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
               />
             </label>
           </div>
-          <p className="mb-2 mt-4 text-xs text-gray-600">
+          <label className="mb-4 block max-w-xs text-xs text-gray-600">
+            Tipo de atestado
+            <select value={categoriaAtestado} onChange={(e) => setCategoriaAtestado(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+              <option value="">Todos os tipos</option>
+              <option value="ST">ST - Estrada</option>
+              <option value="CIV">CIV - Civil</option>
+              <option value="SAN">SAN - Saneamento</option>
+              <option value="INS">INS - Instalação</option>
+            </select>
+          </label>          <p className="mb-2 mt-4 text-xs text-gray-600">
             Política global de comprovação
           </p>
           <div className="flex flex-wrap gap-2">

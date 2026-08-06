@@ -1,7 +1,7 @@
 "use client";
 
 import api from "@/lib/api";
-import type { UploadBatchResponse } from "@/types";
+import type { AtestadoListResponse, UploadBatchResponse } from "@/types";
 import { AlertCircle, CheckCircle, FileText, Loader2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
@@ -69,6 +69,39 @@ export default function UploadPage() {
   const handleUpload = async () => {
     const pending = entries.filter((e) => e.status === "pending");
     if (pending.length === 0) return;
+
+    try {
+      const duplicateNames = (
+        await Promise.all(
+          pending.map(async ({ file }) => {
+            const { data } = await api.get<AtestadoListResponse>("/atestados", {
+              params: { search: file.name, page: 1, limit: 100 },
+            });
+            const duplicated = data.items.some(
+              (atestado) =>
+                atestado.originalFilename.trim().localeCompare(
+                  file.name.trim(),
+                  "pt-BR",
+                  { sensitivity: "accent" },
+                ) === 0,
+            );
+            return duplicated ? file.name : null;
+          }),
+        )
+      ).filter((name): name is string => name !== null);
+
+      if (
+        duplicateNames.length > 0 &&
+        !window.confirm(
+          `Ja existe atestado com o mesmo nome:\n\n${duplicateNames.join("\n")}\n\nDeseja enviar mesmo assim?`,
+        )
+      ) {
+        return;
+      }
+    } catch {
+      toast.error("Nao foi possivel verificar arquivos com nome duplicado.");
+      return;
+    }
 
     setUploading(true);
     setEntries((prev) =>

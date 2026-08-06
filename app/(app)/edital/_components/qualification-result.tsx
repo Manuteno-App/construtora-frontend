@@ -130,6 +130,8 @@ function EvidenceCard({
           <div className="flex flex-wrap items-start gap-2">
             <Link
               href={"/atestados/" + source.atestadoId}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-md bg-gray-900 px-2 py-0.5 text-[11px] font-bold text-white hover:bg-gray-700 hover:underline"
               title="Abrir detalhes do atestado"
             >
@@ -264,9 +266,7 @@ function Caveats({ item }: { item: ServiceCoverage }) {
         <div className="mt-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <AlertTriangle size={15} className="mt-0.5 flex-none" />
           <span>
-            Conversao aproximada em <b>{conversion.source.filename}</b>: the
-            document uses <b>{conversion.service.unidadeOriginal}</b> and the
-            criterion compares in <b>{conversion.service.unidadeComparada}</b>.
+            Conversao aproximada em <b>{conversion.source.filename}</b>: o documento utiliza <b>{conversion.service.unidadeOriginal}</b> e o criterio compara em <b>{conversion.service.unidadeComparada}</b>.
             Confirme a premissa antes da habilitacao.
           </span>
         </div>
@@ -279,10 +279,7 @@ function Caveats({ item }: { item: ServiceCoverage }) {
             <b>
               {unavailableConversion.service.unidadeOriginal ??
                 unavailableConversion.service.unidade}
-            </b>{" "}
-            to <b>{unavailableConversion.service.unidadeComparada}</b>. This
-            document is displayed but is not included in the calculation until a
-            rule is created or approved.
+            </b>{" "} para <b>{unavailableConversion.service.unidadeComparada}</b>. Este documento e exibido, mas nao e incluido no calculo ate que uma regra seja criada ou aprovada.
           </span>
         </div>
       )}
@@ -470,6 +467,8 @@ function ConjunctionResult({
                 <header className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3">
                   <Link
                     href={"/atestados/" + candidate.atestadoId}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="rounded-md bg-gray-900 px-2 py-1 text-xs text-white hover:bg-gray-700 hover:underline"
                     title="Abrir detalhes do atestado"
                   >
@@ -607,6 +606,11 @@ function cellPresentation(source?: QualificationSource) {
   };
 }
 
+function documentPriority(source: QualificationSource) {
+  if (source.selectionRole === "MEETS_ALONE") return 0;
+  if (source.selectionRole === "USED_IN_SUM") return 1;
+  return 2;
+}
 function CoverageMatrix({
   entries,
   documents,
@@ -722,6 +726,12 @@ function CoverageMatrix({
           conversão aproximada
         </span>
         <span>
+          <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded border border-rose-200 bg-rose-100 not-italic text-rose-700">
+            !
+          </i>{" "}
+          sem regra de conversao
+        </span>
+        <span>
           <i className="mr-1 inline-grid h-5 w-5 place-items-center rounded bg-gray-100 not-italic text-gray-400">
             ·
           </i>{" "}
@@ -763,12 +773,20 @@ export function QualificationResult({
     (item) => filter === "all" || coverageStatus(item).tone === filter,
   );
   const documents = useMemo(() => {
-    const sources = result.coverageByService.flatMap(
-      (item) => item.matchingAtestados ?? item.qualifyingAtestados,
-    );
-    return Array.from(
-      new Map(sources.map((source) => [source.atestadoId, source])).values(),
-    );
+    const documentsById = new Map<string, QualificationSource>();
+    result.coverageByService
+      .flatMap((item) => item.matchingAtestados ?? item.qualifyingAtestados)
+      .forEach((source) => {
+        const current = documentsById.get(source.atestadoId);
+        if (!current || documentPriority(source) < documentPriority(current)) {
+          documentsById.set(source.atestadoId, source);
+        }
+      });
+
+    return [...documentsById.values()].sort((left, right) => {
+      const priority = documentPriority(left) - documentPriority(right);
+      return priority || left.filename.localeCompare(right.filename, "pt-BR");
+    });
   }, [result]);
   const overallTone: Tone = result.fullyQualified
     ? "ok"

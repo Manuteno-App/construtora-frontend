@@ -1,6 +1,7 @@
 // ─── Status ─────────────────────────────────────────────────────────────────
 
 export type AtestadoStatus = "PENDING" | "PROCESSING" | "DONE" | "ERROR";
+export type AtestadoCategoria = "ST" | "CIV" | "SAN" | "INS";
 export type EmpresaTipo = "CONTRATANTE" | "CONTRATADA";
 export type ConversationRole = "USER" | "ASSISTANT";
 export type UnitFamilyStatus = "ACTIVE" | "INACTIVE";
@@ -15,6 +16,7 @@ export interface Atestado {
   id: string;
   s3Key: string;
   originalFilename: string;
+  categoria?: AtestadoCategoria | null;
   status: AtestadoStatus;
   errorMessage?: string;
   createdAt: string;
@@ -205,7 +207,8 @@ export interface QualificationFilters {
   dataFim?: string;
   localidade?: string;
   minValor?: number;
-  minExtensaoKm?: number;
+  extensaoKm?: number;
+  categoriaAtestado?: AtestadoCategoria;
 }
 
 export interface ServicoBuscado {
@@ -245,6 +248,7 @@ export interface QualificationSource {
   kmInicial?: number;
   kmFinal?: number;
   extensaoCalculadaKm?: number;
+  categoriaAtestado?: AtestadoCategoria;
   servicos?: ServicoBuscado[];
   selectionRole?:
     | "MEETS_ALONE"
