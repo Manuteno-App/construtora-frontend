@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { AtestadoListResponse, AtestadoStatus } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpDown, Eye, FileText, RefreshCw, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, FileText, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -31,6 +31,8 @@ export default function AtestadosPage() {
   const [sortBy, setSortBy] = useState<"createdAt" | "lastReprocessedAt">("lastReprocessedAt");
   const [search, setSearch] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; filename: string } | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const query = {
     page,
@@ -73,6 +75,29 @@ export default function AtestadosPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, originalFilename }: { id: string; originalFilename: string }) =>
+      api.patch(`/atestados/${id}`, { originalFilename }),
+    onSuccess: () => {
+      toast.success("Arquivo renomeado com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["atestados"] });
+      queryClient.invalidateQueries({ queryKey: ["atestado"] });
+      setRenaming(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const openRename = (id: string, filename: string) => {
+    setRenaming({ id, filename });
+    setRenameValue(filename.replace(/\.pdf$/i, ""));
+  };
+
+  const submitRename = () => {
+    if (renaming) {
+      renameMutation.mutate({ id: renaming.id, originalFilename: renameValue });
+    }
+  };
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -174,6 +199,7 @@ export default function AtestadosPage() {
             </dl>
             <div className="mt-4 flex justify-end gap-2 border-t border-gray-100 pt-3">
               <button onClick={() => router.push(`/atestados/${a.id}`)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600"><Eye size={14} />Detalhes</button>
+              <button onClick={() => openRename(a.id, a.originalFilename)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600"><Pencil size={14} />Renomear</button>
               <button onClick={() => reprocessMutation.mutate(a.id)} disabled={reprocessMutation.isPending || a.status === "PENDING" || a.status === "PROCESSING"} className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 px-3 py-2 text-xs font-medium text-orange-600 disabled:opacity-40"><RefreshCw size={14} className={reprocessMutation.isPending ? "animate-spin" : ""} />Reprocessar</button>
               <button onClick={() => setConfirmDelete(a.id)} className="rounded-lg border border-red-100 p-2 text-red-500" title="Excluir"><Trash2 size={15} /></button>
             </div>
@@ -265,6 +291,13 @@ export default function AtestadosPage() {
                         <Eye size={15} />
                       </button>
                       <button
+                        onClick={() => openRename(a.id, a.originalFilename)}
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        title="Renomear"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
                         onClick={() => reprocessMutation.mutate(a.id)}
                         disabled={reprocessMutation.isPending || a.status === "PENDING" || a.status === "PROCESSING"}
                         className="p-1.5 rounded hover:bg-orange-50 text-gray-400 hover:text-orange-600 transition-colors disabled:opacity-40"
@@ -338,6 +371,36 @@ export default function AtestadosPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {renaming && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="rename-title">
+          <form
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+            onSubmit={(event) => { event.preventDefault(); submitRename(); }}
+          >
+            <h3 id="rename-title" className="mb-2 font-semibold text-gray-900">Renomear arquivo</h3>
+            <p className="mb-4 text-sm text-gray-500">O novo nome será usado em todo o sistema.</p>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="filename">Nome do arquivo</label>
+            <div className="mt-1 flex rounded-lg border border-gray-200 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+              <input
+                id="filename"
+                autoFocus
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                className="min-w-0 flex-1 rounded-l-lg px-3 py-2 text-sm text-gray-800 outline-none"
+                disabled={renameMutation.isPending}
+              />
+              <span className="flex items-center border-l border-gray-200 bg-gray-50 px-3 text-sm text-gray-500">.pdf</span>
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setRenaming(null)} disabled={renameMutation.isPending} className="rounded-lg border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50">Cancelar</button>
+              <button type="submit" disabled={renameMutation.isPending || !renameValue.trim()} className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm text-white disabled:opacity-50" style={{ backgroundColor: "var(--primary)" }}>
+                {renameMutation.isPending && <RefreshCw size={13} className="animate-spin" />}Salvar
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
