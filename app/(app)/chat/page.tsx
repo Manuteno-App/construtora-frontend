@@ -2,6 +2,8 @@
 
 import api, { getApiAccessToken } from "@/lib/api";
 import type { ConversationTurn, QueryRequest, SourceRef } from "@/types";
+import type { BundleEvaluationResult, ServiceRequirement } from "@/types";
+import { QualificationResult } from "../edital/_components/qualification-result";
 import { useQuery } from "@tanstack/react-query";
 import { Bot, ChevronDown, ChevronUp, ExternalLink, RefreshCw, Send, User } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -14,6 +16,8 @@ interface Message {
   content: string;
   streaming?: boolean;
   sources?: SourceRef[];
+  result?: BundleEvaluationResult;
+  requirements?: ServiceRequirement[];
 }
 
 export default function ChatPage() {
@@ -21,6 +25,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingClarification, setPendingClarification] = useState<{ turnId: string; field: string } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     estado: "",
@@ -61,6 +66,8 @@ export default function ChatPage() {
           role: t.role,
           content: t.content,
           sources: t.sources,
+          result: t.metadata?.result,
+          requirements: t.metadata?.plan?.services,
         }))
       );
     }
@@ -70,8 +77,12 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const buildRequest = (): QueryRequest => {
-    const req: QueryRequest = { query: input.trim(), sessionId };
+  const buildRequest = () => {
+    const req: QueryRequest & { clarification?: { turnId: string; value: string } } = { query: input.trim(), sessionId };
+    if (pendingClarification) {
+      req.clarification = { turnId: pendingClarification.turnId, value: input.trim() };
+      return req;
+    }
     const f: QueryRequest["filters"] = {};
     if (filters.estado) f.estado = filters.estado;
     if (filters.obraId) f.obraId = filters.obraId;
@@ -98,6 +109,7 @@ export default function ChatPage() {
       content: "",
       streaming: true,
     };
+    const isClarificationReply = Boolean(pendingClarification);
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     setInput("");
@@ -142,15 +154,20 @@ export default function ChatPage() {
 
             try {
               const event = JSON.parse(payload);
-              if (event.type === "text" && event.content) {
+              if ((event.type === "text" || event.type === "answer") && event.content) {
                 accumulated += event.content;
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantId
-                      ? { ...m, content: accumulated }
+                      ? { ...m, content: accumulated, result: event.result, requirements: event.plan?.services }
                       : m
                   )
                 );
+              }
+              if (event.type === "clarification") {
+                accumulated = event.question;
+                setPendingClarification({ turnId: event.turnId, field: event.field });
+                setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: accumulated } : m));
               }
               if (event.type === "sources") {
                 setMessages((prev) =>
@@ -177,6 +194,8 @@ export default function ChatPage() {
         }
       }
 
+      if (isClarificationReply) setPendingClarification(null);
+
       // Finalize
       setMessages((prev) =>
         prev.map((m) =>
@@ -197,7 +216,7 @@ export default function ChatPage() {
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, sessionId, filters]);
+  }, [input, isStreaming, sessionId, filters, pendingClarification]);
 
   const newSession = () => {
     if (abortRef.current) abortRef.current.abort();
@@ -206,6 +225,7 @@ export default function ChatPage() {
     setSessionId(newId);
     setMessages([]);
     setIsStreaming(false);
+    setPendingClarification(null);
   };
 
   const stripInlineSources = (text: string) =>
@@ -430,6 +450,17 @@ export default function ChatPage() {
                   </div>
                 );
               })()}
+              {msg.result && msg.requirements && (
+                <div className="mt-3 w-full overflow-hidden rounded-xl border border-gray-200 bg-white text-left">
+                  <QualificationResult
+                    result={msg.result}
+                    requirements={msg.requirements}
+                    onOpen={openSourcePdf}
+                    onAllowLimit={() => undefined}
+                    onUseMany={() => undefined}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -444,7 +475,7 @@ export default function ChatPage() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
           disabled={isStreaming}
-          placeholder="Faça uma pergunta sobre os atestados…"
+          placeholder={pendingClarification ? "Responda para continuar a análise…" : "Faça uma pergunta sobre capacidade técnica…"}
           className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 disabled:opacity-60"
           style={{ "--tw-ring-color": "var(--primary)" } as React.CSSProperties}
         />

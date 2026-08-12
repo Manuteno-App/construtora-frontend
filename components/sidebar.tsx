@@ -2,13 +2,14 @@
 
 import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
-import { FileText, LayoutDashboard, LogOut, Menu, Ruler, Shield, Upload, X } from "lucide-react";
+import { FileText, LayoutDashboard, LogOut, Menu, MessageSquare, Ruler, Shield, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
   { href: "/edital", label: "Pesquisa", icon: Shield },
+  { href: "/chat", label: "Chat IA", icon: MessageSquare },
   { href: "/atestados", label: "Atestados", icon: FileText },
   { href: "/unidades", label: "Unidades", icon: Ruler },
   { href: "/", label: "Dashboard", icon: LayoutDashboard },

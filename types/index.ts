@@ -136,6 +136,11 @@ export interface ConversationTurn {
   role: ConversationRole;
   content: string;
   sources?: SourceRef[];
+  metadata?: {
+    result?: BundleEvaluationResult;
+    plan?: { services?: ServiceRequirement[] };
+    kind?: string;
+  };
   createdAt: string;
 }
 
