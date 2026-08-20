@@ -1,7 +1,7 @@
 // ─── Status ─────────────────────────────────────────────────────────────────
 
 export type AtestadoStatus = "PENDING" | "PROCESSING" | "DONE" | "ERROR";
-export type AtestadoCategoria = "ST" | "CIV" | "SAN" | "INS";
+export type AtestadoCategoria = "EST" | "CIV" | "SAN" | "INS";
 export type EmpresaTipo = "CONTRATANTE" | "CONTRATADA";
 export type ConversationRole = "USER" | "ASSISTANT";
 export type UnitFamilyStatus = "ACTIVE" | "INACTIVE";

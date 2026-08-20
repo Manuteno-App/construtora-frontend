@@ -742,6 +742,33 @@ function CoverageMatrix({
   );
 }
 
+function FilterOnlyResult({
+  documents,
+  onOpen,
+}: {
+  documents: QualificationSource[];
+  onOpen: (id: string, pageNumber?: number) => void;
+}) {
+  if (!documents.length)
+    return (
+      <p className="px-5 py-6 text-sm text-gray-500">
+        Nenhum atestado atende aos filtros informados.
+      </p>
+    );
+
+  return (
+    <div className="grid gap-3 p-5 lg:grid-cols-2">
+      {documents.map((document) => (
+        <EvidenceCard
+          key={document.atestadoId}
+          source={document}
+          onOpen={onOpen}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function QualificationResult({
   result,
   requirements,
@@ -774,8 +801,12 @@ export function QualificationResult({
   );
   const documents = useMemo(() => {
     const documentsById = new Map<string, QualificationSource>();
-    result.coverageByService
-      .flatMap((item) => item.matchingAtestados ?? item.qualifyingAtestados)
+    const sources = result.coverageByService.length
+      ? result.coverageByService.flatMap(
+          (item) => item.matchingAtestados ?? item.qualifyingAtestados,
+        )
+      : result.candidateAtestados ?? result.selectedAtestados;
+    sources
       .forEach((source) => {
         const current = documentsById.get(source.atestadoId);
         if (!current || documentPriority(source) < documentPriority(current)) {
@@ -788,13 +819,18 @@ export function QualificationResult({
       return priority || left.filename.localeCompare(right.filename, "pt-BR");
     });
   }, [result]);
+  const filterOnlySearch = result.coverageByService.length === 0;
   const overallTone: Tone = result.fullyQualified
     ? "ok"
     : stats.no > 0
       ? "no"
       : "partial";
   const headline =
-    result.bundleModeApplied === "MANY"
+    filterOnlySearch
+      ? documents.length
+        ? `${documents.length} atestado(s) encontrado(s)`
+        : "Nenhum atestado encontrado"
+      : result.bundleModeApplied === "MANY"
       ? stats.ok === result.coverageByService.length
         ? "Todos os critérios atendidos"
         : `${stats.ok} de ${result.coverageByService.length} critérios atendidos`
@@ -810,7 +846,9 @@ export function QualificationResult({
             ? "Quantidade completa, bloqueada pela regra"
             : "Nenhum conjunto atende todos os critérios";
   const subtitle =
-    result.bundleModeApplied === "MANY"
+    filterOnlySearch
+      ? "Resultado obtido somente pelos filtros informados."
+      : result.bundleModeApplied === "MANY"
       ? "Cada critério resolve com seus próprios atestados."
       : stats.no > 0
         ? `${stats.no} critério(s) não existem na base — nenhuma combinação resolve.`
@@ -840,7 +878,9 @@ export function QualificationResult({
       <header className="flex flex-wrap items-center gap-3 border-b border-gray-200 px-5 py-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
           Resultado —{" "}
-          {result.bundleModeApplied === "MANY"
+          {filterOnlySearch
+            ? "filtros aplicados"
+            : result.bundleModeApplied === "MANY"
             ? "cada critério com seus próprios atestados"
             : "todos os critérios no mesmo conjunto"}
         </h2>
@@ -848,7 +888,7 @@ export function QualificationResult({
           {result.totalAtestadosBase != null
             ? `${format(result.totalAtestadosBase)} na base · `
             : ""}
-          {result.matchingAtestadosCount ?? documents.length} com algum serviço
+          {result.matchingAtestadosCount ?? documents.length} {filterOnlySearch ? "encontrados" : "com algum serviço"}
           {result.elapsedMs != null
             ? ` · ${(result.elapsedMs / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s`
             : ""}
@@ -865,45 +905,49 @@ export function QualificationResult({
             <h3 className="text-lg font-bold text-gray-900">{headline}</h3>
             <p className="text-sm text-gray-500">{subtitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCriteria((value) => !value)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
-          >
-            <span className="mr-2 text-[10px]">{showCriteria ? "⌄" : "▸"}</span>
-            {showCriteria ? "ocultar" : "ver"} critério a critério
-          </button>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(
-            [
-              ["ok", "atendidos", stats.ok],
-              ["partial", "parcialmente atendidos", stats.partial],
-              ["no", "não atendidos", stats.no],
-            ] as const
-          ).map(([kind, label, count]) => (
+          {!filterOnlySearch && (
             <button
-              key={kind}
               type="button"
-              onClick={() => setFilter(filter === kind ? "all" : kind)}
-              className={`rounded-xl border px-3 py-2 text-left ${filter === kind ? "border-orange-400 ring-2 ring-orange-100" : "border-gray-200"}`}
+              onClick={() => setShowCriteria((value) => !value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
             >
-              <b
-                className={
-                  kind === "ok"
-                    ? "text-emerald-700"
-                    : kind === "partial"
-                      ? "text-amber-700"
-                      : "text-rose-700"
-                }
-              >
-                {count}
-              </b>
-              <span className="ml-2 text-xs text-gray-500">{label}</span>
+              <span className="mr-2 text-[10px]">{showCriteria ? "⌄" : "▸"}</span>
+              {showCriteria ? "ocultar" : "ver"} critério a critério
             </button>
-          ))}
+          )}
         </div>
-        {showCriteria && (
+        {!filterOnlySearch && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(
+              [
+                ["ok", "atendidos", stats.ok],
+                ["partial", "parcialmente atendidos", stats.partial],
+                ["no", "não atendidos", stats.no],
+              ] as const
+            ).map(([kind, label, count]) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setFilter(filter === kind ? "all" : kind)}
+                className={`rounded-xl border px-3 py-2 text-left ${filter === kind ? "border-orange-400 ring-2 ring-orange-100" : "border-gray-200"}`}
+              >
+                <b
+                  className={
+                    kind === "ok"
+                      ? "text-emerald-700"
+                      : kind === "partial"
+                        ? "text-amber-700"
+                        : "text-rose-700"
+                  }
+                >
+                  {count}
+                </b>
+                <span className="ml-2 text-xs text-gray-500">{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {showCriteria && !filterOnlySearch && (
           <div className="mt-4 border-t border-gray-200 pt-3">
             {result.coverageByService.map((item, index) => {
               const state = coverageStatus(item);
@@ -940,7 +984,9 @@ export function QualificationResult({
           </div>
         )}
       </div>
-      {result.bundleModeApplied === "MANY" ? (
+      {filterOnlySearch ? (
+        <FilterOnlyResult documents={documents} onOpen={onOpen} />
+      ) : result.bundleModeApplied === "MANY" ? (
         <>
           <CoverageMatrix
             entries={entries}

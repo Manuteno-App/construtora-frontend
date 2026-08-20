@@ -248,7 +248,6 @@ export default function EditalPage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const valid = criteria.filter((item) => item.query.trim());
-    if (!valid.length) return toast.error("Informe ao menos um serviço.");
     if (
       bundleMode === "MAX" &&
       (!Number.isInteger(Number(bundleMax)) || Number(bundleMax) < 1)
@@ -273,8 +272,10 @@ export default function EditalPage() {
         : {}),
       ...(minValor ? { minValor: Number(minValor) } : {}),
       ...(extensaoKm ? { extensaoKm: parseDecimal(extensaoKm) } : {}),
-      ...(categoriaAtestado ? { categoriaAtestado: categoriaAtestado as "ST" | "CIV" | "SAN" | "INS" } : {}),
+      ...(categoriaAtestado ? { categoriaAtestado: categoriaAtestado as "EST" | "CIV" | "SAN" | "INS" } : {}),
     };
+    if (!valid.length && !Object.keys(filters).length)
+      return toast.error("Informe um serviço ou ao menos um filtro.");
     const services: ServiceRequirement[] = valid.map((item) => ({
       criterionKey: String(item.id),
       query: normalizeSearchUnits(item.query).trim(),
@@ -417,7 +418,7 @@ export default function EditalPage() {
             Tipo de atestado
             <select value={categoriaAtestado} onChange={(e) => setCategoriaAtestado(e.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
               <option value="">Todos os tipos</option>
-              <option value="ST">ST - Estrada</option>
+              <option value="EST">EST - Estrada</option>
               <option value="CIV">CIV - Civil</option>
               <option value="SAN">SAN - Saneamento</option>
               <option value="INS">INS - Instalação</option>
@@ -464,10 +465,12 @@ export default function EditalPage() {
               Serviços e quantitativos exigidos
             </p>
             <span className="hidden text-xs text-gray-400 md:block">
-              Informe o serviço, a quantidade mínima e a forma de comprovação
-              exigida
+              Serviço é opcional quando a busca for somente por filtros
             </span>
           </div>
+          <p className="mb-3 text-xs text-gray-500">
+            Deixe o serviço em branco para listar todos os atestados que atendem aos filtros acima.
+          </p>
           <div className="space-y-2">
             {criteria.map((item, index) => (
               <div
