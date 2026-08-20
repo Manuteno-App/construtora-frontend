@@ -270,7 +270,7 @@ export default function EditalPage() {
   const update = (
     id: number,
     field: keyof Omit<Criterion, "id">,
-    value: string,
+    value: string | string[],
   ) =>
     setCriteria((list) =>
       list.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
