@@ -520,14 +520,13 @@ export default function EditalPage() {
                         update(item.id, "confirmedServiceIds", []);
                       }}
                       onSelect={(suggestion) => {
-                        if (suggestion.matchKind === "EXACT") {
-                          update(item.id, "query", suggestion.descricao);
-                          update(item.id, "confirmedServiceIds", []);
-                        } else {
-                          update(item.id, "query", suggestion.descricao);
-                          update(item.id, "confirmedServiceIds", []);
-                          update(item.id, "matchMode", "CONTAINS");
-                        }
+                        update(item.id, "query", suggestion.descricao);
+                        update(item.id, "confirmedServiceIds", []);
+                        update(
+                          item.id,
+                          "matchMode",
+                          suggestion.matchKind === "EXACT" ? "EXACT" : "CONTAINS",
+                        );
                         if (suggestion.unidadeSugerida)
                           update(
                             item.id,
