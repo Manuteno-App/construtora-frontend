@@ -26,7 +26,7 @@ type Criterion = {
   proofMode: ProofMode;
   maxAtestados: string;
   confirmedServiceIds: string[];
-  needsConfirmation: boolean;
+  matchMode: "EXACT" | "CONTAINS";
 };
 const ESTADOS = [
   "AC",
@@ -71,7 +71,7 @@ const criterion = (): Criterion => ({
   proofMode: "ONE",
   maxAtestados: "",
   confirmedServiceIds: [],
-  needsConfirmation: false,
+  matchMode: "CONTAINS",
 });
 
 
@@ -89,12 +89,12 @@ function ServiceAutocomplete({
   value,
   onChange,
   onSelect,
-  forceOpen = false,
+  onMatchMode,
 }: {
   value: string;
   onChange: (value: string) => void;
   onSelect: (item: ResolvedDescricao) => void;
-  forceOpen?: boolean;
+  onMatchMode: (mode: "EXACT" | "CONTAINS") => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -114,9 +114,6 @@ function ServiceAutocomplete({
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, []);
-  useEffect(() => {
-    if (forceOpen) setOpen(true);
-  }, [forceOpen]);
   return (
     <div ref={ref} className="relative min-w-0 flex-1">
       <input
@@ -134,16 +131,26 @@ function ServiceAutocomplete({
           <li
             onMouseDown={(e) => {
               e.preventDefault();
-              onSelect({ descricao: value.trim(), score: 1, matchKind: "EXACT" });
+              onMatchMode("EXACT");
               setOpen(false);
             }}
             className="cursor-pointer border-b border-gray-100 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50"
           >
-            Pesquisar exatamente por: “{value.trim()}”
+            Pesquisar exatamente: “{value.trim()}”
           </li>
-          {data.filter((item) => item.matchKind === "EXACT").map((item) => (
+          <li
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onMatchMode("CONTAINS");
+              setOpen(false);
+            }}
+            className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700 hover:bg-orange-50"
+          >
+            Pesquisar contendo: “{value.trim()}”
+          </li>
+          {data.map((item, index) => (
             <li
-              key={`${item.descricao}-${item.matchKind}`}
+              key={`${item.descricao}-${item.matchKind}-${index}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(item);
@@ -157,28 +164,6 @@ function ServiceAutocomplete({
                   · {item.unidadeSugerida}
                 </span>
               )}
-            </li>
-          ))}
-          {data.some((item) => item.matchKind !== "EXACT") && (
-            <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Serviços semelhantes — confirme para usar
-            </li>
-          )}
-          {data.filter((item) => item.matchKind !== "EXACT").map((item, index) => (
-            <li
-              key={`${item.descricao}-${item.matchKind}-${index}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                onSelect(item);
-                setOpen(false);
-              }}
-              className="cursor-pointer px-3 py-2 text-sm hover:bg-orange-50"
-            >
-              {item.descricao}
-              <span className="ml-2 text-xs text-amber-700">
-                · {item.matchKind === "SEMANTIC" ? `relevância ${Math.round((item.similarity ?? item.score) * 100)}%` : "correspondência parcial"}
-              </span>
-              {item.unidadeSugerida && <span className="ml-2 text-xs text-gray-400">· {item.unidadeSugerida}</span>}
             </li>
           ))}
         </ul>
@@ -286,7 +271,7 @@ export default function EditalPage() {
     setCriteria((list) =>
       list.length > 1 ? list.filter((item) => item.id !== id) : list,
     );
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const valid = criteria.filter((item) => item.query.trim());
     if (
@@ -304,34 +289,6 @@ export default function EditalPage() {
       )
     )
       return toast.error("Informe o limite de cada critério.");
-    const unresolved = valid.filter((item) => !item.confirmedServiceIds.length);
-    if (unresolved.length) {
-      const suggestions = await Promise.all(
-        unresolved.map((item) =>
-          api
-            .get<ResolvedDescricao[]>("/qualification/resolve", { params: { q: item.query } })
-            .then((response) => ({ id: item.id, query: item.query, items: response.data }))
-            .catch(() => ({ id: item.id, query: item.query, items: [] as ResolvedDescricao[] })),
-        ),
-      );
-      const requiresConfirmation = new Set(
-        suggestions
-          .filter(({ query, items }) => {
-            const hasExact = items.some(
-              (item) => item.matchKind === "EXACT" && item.descricao.trim().toLocaleLowerCase() === query.trim().toLocaleLowerCase(),
-            );
-            return !hasExact && items.some((item) => item.matchKind !== "EXACT");
-          })
-          .map(({ id }) => id),
-      );
-      if (requiresConfirmation.size) {
-        setCriteria((list) => list.map((item) => ({
-          ...item,
-          needsConfirmation: requiresConfirmation.has(item.id),
-        })));
-        return toast.message("Selecione uma evidência semelhante antes de buscar.");
-      }
-    }
     const date = periodo.match(/(\d{4})\s*[-–—]\s*(\d{4})/);
     const localidade = [municipio.trim(), estado].filter(Boolean).join(", ");
     const filters: QualificationFilters = {
@@ -348,6 +305,7 @@ export default function EditalPage() {
     const services: ServiceRequirement[] = valid.map((item) => ({
       criterionKey: String(item.id),
       query: normalizeSearchUnits(item.query).trim(),
+      matchMode: item.matchMode,
       ...(item.minQuantidade
         ? { minQuantidade: parseDecimal(item.minQuantidade) }
         : {}),
@@ -556,20 +514,20 @@ export default function EditalPage() {
                   <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row">
                     <ServiceAutocomplete
                       value={item.query}
-                      forceOpen={item.needsConfirmation}
+                      onMatchMode={(mode) => update(item.id, "matchMode", mode)}
                       onChange={(value) => {
                         update(item.id, "query", value);
                         update(item.id, "confirmedServiceIds", []);
-                        update(item.id, "needsConfirmation", false);
                       }}
                       onSelect={(suggestion) => {
                         if (suggestion.matchKind === "EXACT") {
                           update(item.id, "query", suggestion.descricao);
                           update(item.id, "confirmedServiceIds", []);
                         } else {
-                          update(item.id, "confirmedServiceIds", suggestion.serviceIds ?? []);
+                          update(item.id, "query", suggestion.descricao);
+                          update(item.id, "confirmedServiceIds", []);
+                          update(item.id, "matchMode", "CONTAINS");
                         }
-                        update(item.id, "needsConfirmation", false);
                         if (suggestion.unidadeSugerida)
                           update(
                             item.id,
@@ -578,11 +536,6 @@ export default function EditalPage() {
                           );
                       }}
                     />
-                    {item.confirmedServiceIds.length > 0 && (
-                      <span className="self-center whitespace-nowrap text-xs font-medium text-amber-700">
-                        {item.confirmedServiceIds.length} evidência aproximada confirmada
-                      </span>
-                    )}
                     <input
                       value={item.minQuantidade}
                       onChange={(e) =>

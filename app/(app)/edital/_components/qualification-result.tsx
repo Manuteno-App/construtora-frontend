@@ -300,7 +300,9 @@ function CriterionDetail({
   const matchingSources = item.matchingAtestados ?? item.qualifyingAtestados;
   const sources =
     item.proofModeApplied === "ONE" && item.quantidadeExigida !== undefined
-      ? item.qualifyingAtestados
+      ? item.qualifyingAtestados.length > 0
+        ? item.qualifyingAtestados
+        : matchingSources
       : matchingSources;
   return (
     <section className="border-t border-gray-200 bg-gray-50 px-5 py-4">

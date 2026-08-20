@@ -280,6 +280,7 @@ export interface ServiceRequirement {
   proofMode?: ProofMode;
   maxAtestados?: number;
   confirmedServiceIds?: string[];
+  matchMode?: "EXACT" | "CONTAINS";
 }
 
 export type ProofMode = "ONE" | "MANY" | "MAX";
