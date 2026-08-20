@@ -267,6 +267,9 @@ export interface ResolvedDescricao {
   descricao: string;
   score: number;
   unidadeSugerida?: string;
+  matchKind: "EXACT" | "TEXTUAL" | "SEMANTIC";
+  similarity?: number;
+  serviceIds?: string[];
 }
 
 export interface ServiceRequirement {
@@ -276,6 +279,7 @@ export interface ServiceRequirement {
   unidade?: string;
   proofMode?: ProofMode;
   maxAtestados?: number;
+  confirmedServiceIds?: string[];
 }
 
 export type ProofMode = "ONE" | "MANY" | "MAX";

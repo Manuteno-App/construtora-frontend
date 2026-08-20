@@ -25,6 +25,7 @@ type Criterion = {
   unidade: string;
   proofMode: ProofMode;
   maxAtestados: string;
+  confirmedServiceIds: string[];
 };
 const ESTADOS = [
   "AC",
@@ -68,6 +69,7 @@ const criterion = (): Criterion => ({
   unidade: "",
   proofMode: "ONE",
   maxAtestados: "",
+  confirmedServiceIds: [],
 });
 
 
@@ -120,11 +122,21 @@ function ServiceAutocomplete({
         placeholder="Serviço ou material executado"
         className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
       />
-      {open && data.length > 0 && (
+      {open && value.trim().length >= 3 && (
         <ul className="absolute z-30 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-          {data.map((item) => (
+          <li
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSelect({ descricao: value.trim(), score: 1, matchKind: "EXACT" });
+              setOpen(false);
+            }}
+            className="cursor-pointer border-b border-gray-100 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50"
+          >
+            Pesquisar exatamente por: “{value.trim()}”
+          </li>
+          {data.filter((item) => item.matchKind === "EXACT").map((item) => (
             <li
-              key={item.descricao}
+              key={`${item.descricao}-${item.matchKind}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(item);
@@ -138,6 +150,28 @@ function ServiceAutocomplete({
                   · {item.unidadeSugerida}
                 </span>
               )}
+            </li>
+          ))}
+          {data.some((item) => item.matchKind !== "EXACT") && (
+            <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Serviços semelhantes — confirme para usar
+            </li>
+          )}
+          {data.filter((item) => item.matchKind !== "EXACT").map((item, index) => (
+            <li
+              key={`${item.descricao}-${item.matchKind}-${index}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(item);
+                setOpen(false);
+              }}
+              className="cursor-pointer px-3 py-2 text-sm hover:bg-orange-50"
+            >
+              {item.descricao}
+              <span className="ml-2 text-xs text-amber-700">
+                · {item.matchKind === "SEMANTIC" ? `relevância ${Math.round((item.similarity ?? item.score) * 100)}%` : "correspondência parcial"}
+              </span>
+              {item.unidadeSugerida && <span className="ml-2 text-xs text-gray-400">· {item.unidadeSugerida}</span>}
             </li>
           ))}
         </ul>
@@ -283,6 +317,9 @@ export default function EditalPage() {
         ? { minQuantidade: parseDecimal(item.minQuantidade) }
         : {}),
       ...(item.unidade ? { unidade: item.unidade } : {}),
+      ...(item.confirmedServiceIds.length
+        ? { confirmedServiceIds: item.confirmedServiceIds }
+        : {}),
       ...(bundleMode === "MANY"
         ? {
             proofMode: item.proofMode,
@@ -484,9 +521,17 @@ export default function EditalPage() {
                   <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row">
                     <ServiceAutocomplete
                       value={item.query}
-                      onChange={(value) => update(item.id, "query", value)}
+                      onChange={(value) => {
+                        update(item.id, "query", value);
+                        update(item.id, "confirmedServiceIds", []);
+                      }}
                       onSelect={(suggestion) => {
-                        update(item.id, "query", suggestion.descricao);
+                        if (suggestion.matchKind === "EXACT") {
+                          update(item.id, "query", suggestion.descricao);
+                          update(item.id, "confirmedServiceIds", []);
+                        } else {
+                          update(item.id, "confirmedServiceIds", suggestion.serviceIds ?? []);
+                        }
                         if (suggestion.unidadeSugerida)
                           update(
                             item.id,
@@ -495,6 +540,11 @@ export default function EditalPage() {
                           );
                       }}
                     />
+                    {item.confirmedServiceIds.length > 0 && (
+                      <span className="self-center whitespace-nowrap text-xs font-medium text-amber-700">
+                        {item.confirmedServiceIds.length} evidência aproximada confirmada
+                      </span>
+                    )}
                     <input
                       value={item.minQuantidade}
                       onChange={(e) =>
