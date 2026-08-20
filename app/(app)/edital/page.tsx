@@ -26,6 +26,7 @@ type Criterion = {
   proofMode: ProofMode;
   maxAtestados: string;
   confirmedServiceIds: string[];
+  needsConfirmation: boolean;
 };
 const ESTADOS = [
   "AC",
@@ -70,6 +71,7 @@ const criterion = (): Criterion => ({
   proofMode: "ONE",
   maxAtestados: "",
   confirmedServiceIds: [],
+  needsConfirmation: false,
 });
 
 
@@ -87,10 +89,12 @@ function ServiceAutocomplete({
   value,
   onChange,
   onSelect,
+  forceOpen = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   onSelect: (item: ResolvedDescricao) => void;
+  forceOpen?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -110,6 +114,9 @@ function ServiceAutocomplete({
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, []);
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
   return (
     <div ref={ref} className="relative min-w-0 flex-1">
       <input
@@ -270,7 +277,7 @@ export default function EditalPage() {
   const update = (
     id: number,
     field: keyof Omit<Criterion, "id">,
-    value: string | string[],
+    value: string | string[] | boolean,
   ) =>
     setCriteria((list) =>
       list.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
@@ -279,7 +286,7 @@ export default function EditalPage() {
     setCriteria((list) =>
       list.length > 1 ? list.filter((item) => item.id !== id) : list,
     );
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const valid = criteria.filter((item) => item.query.trim());
     if (
@@ -297,6 +304,34 @@ export default function EditalPage() {
       )
     )
       return toast.error("Informe o limite de cada critério.");
+    const unresolved = valid.filter((item) => !item.confirmedServiceIds.length);
+    if (unresolved.length) {
+      const suggestions = await Promise.all(
+        unresolved.map((item) =>
+          api
+            .get<ResolvedDescricao[]>("/qualification/resolve", { params: { q: item.query } })
+            .then((response) => ({ id: item.id, query: item.query, items: response.data }))
+            .catch(() => ({ id: item.id, query: item.query, items: [] as ResolvedDescricao[] })),
+        ),
+      );
+      const requiresConfirmation = new Set(
+        suggestions
+          .filter(({ query, items }) => {
+            const hasExact = items.some(
+              (item) => item.matchKind === "EXACT" && item.descricao.trim().toLocaleLowerCase() === query.trim().toLocaleLowerCase(),
+            );
+            return !hasExact && items.some((item) => item.matchKind !== "EXACT");
+          })
+          .map(({ id }) => id),
+      );
+      if (requiresConfirmation.size) {
+        setCriteria((list) => list.map((item) => ({
+          ...item,
+          needsConfirmation: requiresConfirmation.has(item.id),
+        })));
+        return toast.message("Selecione uma evidência semelhante antes de buscar.");
+      }
+    }
     const date = periodo.match(/(\d{4})\s*[-–—]\s*(\d{4})/);
     const localidade = [municipio.trim(), estado].filter(Boolean).join(", ");
     const filters: QualificationFilters = {
@@ -521,9 +556,11 @@ export default function EditalPage() {
                   <div className="flex min-w-0 flex-1 flex-col gap-2 md:flex-row">
                     <ServiceAutocomplete
                       value={item.query}
+                      forceOpen={item.needsConfirmation}
                       onChange={(value) => {
                         update(item.id, "query", value);
                         update(item.id, "confirmedServiceIds", []);
+                        update(item.id, "needsConfirmation", false);
                       }}
                       onSelect={(suggestion) => {
                         if (suggestion.matchKind === "EXACT") {
@@ -532,6 +569,7 @@ export default function EditalPage() {
                         } else {
                           update(item.id, "confirmedServiceIds", suggestion.serviceIds ?? []);
                         }
+                        update(item.id, "needsConfirmation", false);
                         if (suggestion.unidadeSugerida)
                           update(
                             item.id,
